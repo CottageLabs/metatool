@@ -3,9 +3,12 @@ import imp, os
 MODULE_EXTENSIONS = ('.py') # only interested in .py files, not pyc or pyo
 
 class Plugin(object):
-    # subclasses should override this
-    def supports(self, datatype, validation_options):
+    # subclasses should override these methods with their implementations
+    def supports(self, datatype, **validation_options):
         return False
+        
+    def run(self, issn, **validation_options):
+        return None
     
 class ValidationResponse(object):
     def __init__(self, provenance=None):

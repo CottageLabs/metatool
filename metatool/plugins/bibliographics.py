@@ -9,7 +9,7 @@ class ISSN(plugin.Plugin):
         return datatype.lower() == "issn"
     
     def run(self, issn, *args, **kwargs):
-        r = plugin.ValidationResponse(self.__name__)
+        r = plugin.ValidationResponse()
         
         # attempt format validation based on regular expressions first
         m = re.match(self.rx_1, issn)
@@ -32,8 +32,9 @@ class ISSN(plugin.Plugin):
     
     def _checksum(self, issn):
         digits = issn.replace("-", "")
-        checkon = digits[:7]
+        remainder = sum([int(b) * (8 - int(a)) for a, b in enumerate(digits) if a < 7]) % 11
         
+        """
         total = 0
         multiplier = 8
         for c in checkon:
@@ -41,6 +42,7 @@ class ISSN(plugin.Plugin):
             multiplier -= 1
         
         remainder = total % 11
+        """
         
         if remainder == 0:
             return "0"
@@ -48,3 +50,60 @@ class ISSN(plugin.Plugin):
         if check == 10:
             return "X"
         return str(check)
+
+
+
+class ISBN(plugin.Plugin):
+    rx_10 = "\d{9}[0-9X]"
+    rx_13 = "\d{12}[0-9X]"
+
+    def supports(self, datatype, *args, **kwargs):
+        lower = datatype.lower()
+        return lower == "isbn" or lower == "isbn10" or lower == "isbn13"
+        
+    def run(self, isbn, *args, **kwargs):
+        r = plugin.ValidationResponse()
+        
+        # try to normalise out some of the isbn prefixes        
+        norm = isbn.replace(" ", "").replace("-", "").lower()
+        if norm.startswith("isbn"):
+            norm = norm[len("isbn"):]
+        
+        if norm.startswith(":"):
+            norm = norm[1:]
+        
+        m10 = re.match(self.rx_10, norm)
+        m13 = None
+        if m10 is None:
+            m13 = re.match(self.rx_13, norm)
+            if m13 is None:
+                r.error("isbn does not pass format check.  Should be a 10 or 13 digit number (with optional hyphenation), possibly prefixed with 'ISBN:'")
+                return r
+        
+        checksum = None
+        if m10 is not None:
+            checksum = self._checksum10(norm)
+        elif m13 is not None:
+            checksum = self._checksum13(norm)
+            
+        if checksum != norm[-1]:
+            r.error("isbn checksum does not match calculated checksum")
+        return r
+    
+    def _checksum10(self, isbn10):
+        remainder = sum((10 - i) * (int(x)) for i, x in enumerate(isbn10) if i < 9) % 11
+        
+        if remainder == 0:
+            return "0"
+        check = 11 - remainder
+        if check == 10:
+            return "X"
+        return str(check)
+        
+    def _checksum13(self, isbn13):
+        remainder = (10 - (sum(int(digit) * (3 if idx % 2 else 1) for idx, digit in enumerate(isbn13[:12])) % 10)) % 10
+        return str(remainder)
+        
+        
+        
+        
