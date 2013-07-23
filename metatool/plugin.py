@@ -7,16 +7,23 @@ class Plugin(object):
     def supports(self, datatype, **validation_options):
         return False
         
-    def run(self, issn, **validation_options):
+    def run(self, datatype, value, **validation_options):
         return None
     
 class ValidationResponse(object):
-    def __init__(self, provenance=None):
-        if provenance is not None:
-            self.provenance = provenance
+    def __init__(self):
         self._info = []
         self._warn = []
         self._error = []
+        self._correction = []
+        
+        # write to this directly if you have some data from some service
+        # which might be useful to the validator later
+        self.data = None
+        
+        # you can write to this if you want, but the validator will
+        # probably overwrite it for you later anyway, so no need to bother
+        self.provenance = None
         
     def info(self, info):
         self._info.append(info)
@@ -26,6 +33,12 @@ class ValidationResponse(object):
         
     def error(self, error):
         self._error.append(error)
+        
+    def has_errors(self):
+        return len(self._error) > 0
+    
+    def correction(self, correction):
+        self._correction.append(correction)
         
 def load():
     plugin_instances = {}

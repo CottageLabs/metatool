@@ -8,7 +8,7 @@ class ISSN(plugin.Plugin):
     def supports(self, datatype, *args, **kwargs):
         return datatype.lower() == "issn"
     
-    def run(self, issn, *args, **kwargs):
+    def run(self, datatype, issn, *args, **kwargs):
         r = plugin.ValidationResponse()
         
         # attempt format validation based on regular expressions first
@@ -61,7 +61,7 @@ class ISBN(plugin.Plugin):
         lower = datatype.lower()
         return lower == "isbn" or lower == "isbn10" or lower == "isbn13"
         
-    def run(self, isbn, *args, **kwargs):
+    def run(self, datatype, isbn, *args, **kwargs):
         r = plugin.ValidationResponse()
         
         # try to normalise out some of the isbn prefixes        
