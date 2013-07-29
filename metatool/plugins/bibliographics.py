@@ -8,8 +8,12 @@ class ISSN(plugin.Plugin):
     def supports(self, datatype, *args, **kwargs):
         return datatype.lower() == "issn"
     
-    def run(self, datatype, issn, *args, **kwargs):
+    def validate(self, datatype, issn, *args, **kwargs):
         r = plugin.ValidationResponse()
+        return self.validate_format(datatype, issn, validation_response=r)
+    
+    def validate_format(self, datatype, issn, *args, **kwargs):
+        r = kwargs.get("validation_response", plugin.ValidationResponse())
         
         # attempt format validation based on regular expressions first
         m = re.match(self.rx_1, issn)
@@ -20,6 +24,7 @@ class ISSN(plugin.Plugin):
                 return r # we can't do any further validation
             else:
                 r.warn("issn consists of 8 valid digits, but is not hyphenated; recommended form for issns in nnnn-nnnn")
+                r.correction(self._correct(issn))
         
         # if we get to here our issn at least consists of the right digits.  Now we can 
         # calculate the checksum ourselves
@@ -27,8 +32,9 @@ class ISSN(plugin.Plugin):
         if checksum != issn[-1]:
             r.error("issn checksum digit does not match the calculated checksum")
         return r
-        
-        # we may go on after this to check for the issn in a database somewhere
+    
+    def _correct(self, issn):
+        return issn[:4] + "-" + issn[4:]
     
     def _checksum(self, issn):
         digits = issn.replace("-", "")
@@ -63,7 +69,11 @@ class ISBN(plugin.Plugin):
         
     def run(self, datatype, isbn, *args, **kwargs):
         r = plugin.ValidationResponse()
-        
+        return self.validate_format(datatype, isbn, validation_response=r)
+    
+    def validate_format(self, datatype, isbn, *args, **kwargs):
+        r = kwargs.get("validation_response", plugin.ValidationResponse())
+    
         # try to normalise out some of the isbn prefixes        
         norm = isbn.replace(" ", "").replace("-", "").lower()
         if norm.startswith("isbn"):

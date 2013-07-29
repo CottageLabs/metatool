@@ -9,12 +9,26 @@ class ORCID(plugin.Plugin):
         lower = datatype.lower()
         return lower == "orcid"
     
-    def run(self, datatype, value, *args, **validation_options):
+    def validate(self, datatype, value, *args, **validation_options):
         r = plugin.ValidationResponse()
         
         # first do the format validation - layout, hyphenation, checksum, etc.
         # returns just the identifier part of the orcid if successful
         oid = self._format_validate(value, r)
+        
+        return self.validate_realism(datatype, value, validation_response=r, oid=oid)
+        
+    def validate_format(self, datatype, value, *args, **validation_options):
+        r = kwargs.get("validation_response", plugin.ValidationResponse())
+        oid = self._format_validate(value, r)
+        return r
+    
+    def validate_realism(self, datatype, value, *args, **kwargs):
+        r = kwargs.get("validation_response", plugin.ValidationResponse())
+        oid = kwargs.get("oid", None)
+        
+        if oid is None:
+            return r
         
         # now make a request to the ORCID service to see if this orcid is
         # resolvable
@@ -29,7 +43,7 @@ class ORCID(plugin.Plugin):
         # save the data we got back from orcid in case it is useful to the validator
         r.data = author._original_dict
         return r
-        
+    
     def _format_validate(self, orcid_string, r):
         correction_required = False
         

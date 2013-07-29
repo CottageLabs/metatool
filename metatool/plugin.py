@@ -5,10 +5,16 @@ MODULE_EXTENSIONS = ('.py') # only interested in .py files, not pyc or pyo
 class Plugin(object):
     # subclasses should override these methods with their implementations
     def supports(self, datatype, **validation_options):
-        return False
+        raise NotImplementedError
         
-    def run(self, datatype, value, **validation_options):
-        return None
+    def validate(self, datatype, value, **validation_options):
+        raise NotImplementedError
+        
+    def validate_format(self, datatype, value, **validation_options):
+        raise NotImplementedError
+        
+    def validate_realism(self, datatype, value, **validation_options):
+        raise NotImplementedError
     
 class ValidationResponse(object):
     def __init__(self):
