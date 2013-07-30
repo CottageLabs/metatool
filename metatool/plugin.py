@@ -1,4 +1,4 @@
-import imp, os
+import imp, os, json
 
 MODULE_EXTENSIONS = ('.py') # only interested in .py files, not pyc or pyo
 
@@ -22,6 +22,7 @@ class ValidationResponse(object):
         self._warn = []
         self._error = []
         self._correction = []
+        self._alternative = []
         
         # write to this directly if you have some data from some service
         # which might be useful to the validator later
@@ -45,6 +46,23 @@ class ValidationResponse(object):
     
     def correction(self, correction):
         self._correction.append(correction)
+    
+    def alternative(self, alt):
+        self._alternative.append(alt)
+    
+    def json(self, indent=None):
+        desc = {
+            "provenance" : self.provenance,
+            "info" : self._info,
+            "warn" : self._warn,
+            "error" : self._error,
+            "correction" :  self._correction,
+            "alternative" : self._alternative
+        }
+        if indent is None:
+            return json.dumps(desc)
+        else:
+            return json.dumps(desc, indent=indent)
         
 def load():
     plugin_instances = {}
