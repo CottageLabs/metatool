@@ -1,7 +1,7 @@
 import plugin as plugin
 import re
 
-class ISSN(plugin.Plugin):
+class ISSN(plugin.Validator):
     rx_1 = "\d{4}-\d{3}[0-9X]"
     rx_2 = "\d{7}[0-9X]"
     
@@ -59,7 +59,7 @@ class ISSN(plugin.Plugin):
 
 
 
-class ISBN(plugin.Plugin):
+class ISBN(plugin.Validator):
     rx_10 = "\d{9}[0-9X]"
     rx_13 = "\d{12}[0-9X]"
 
@@ -114,7 +114,7 @@ class ISBN(plugin.Plugin):
         remainder = (10 - (sum(int(digit) * (3 if idx % 2 else 1) for idx, digit in enumerate(isbn13[:12])) % 10)) % 10
         return str(remainder)
         
-class ISO6391(plugin.Plugin):
+class ISO6391(plugin.Validator):
 
     codes = {
         "aa" : {'iso6392': u'aar', 'T': u'', 'name': u'Afar'},
@@ -328,7 +328,7 @@ class ISO6391(plugin.Plugin):
         
         return r
 
-class ISO6392(plugin.Plugin):
+class ISO6392(plugin.Validator):
     
     codes = {
         "aar" : {'iso6391': u'aa', 'T': u'', 'name': u'Afar'},
@@ -850,7 +850,7 @@ class ISO6392(plugin.Plugin):
         
         return r
     
-class Language(plugin.Plugin):
+class Language(plugin.Validator):
 
     langs = {
         "abkhazian" : {'iso6392': u'abk', 'iso6391': u'ab', 'T': u''},

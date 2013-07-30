@@ -1,7 +1,7 @@
 import plugin
 import orcid, re
 
-class ORCID(plugin.Plugin):
+class ORCID(plugin.Validator):
     rx_1 = "(\d{4}-\d{4}-\d{4}-\d{3}[0-9X])"
     rx_2 = "(\d{15}[0-9X])"
 
@@ -41,7 +41,7 @@ class ORCID(plugin.Plugin):
             return r
         
         # save the data we got back from orcid in case it is useful to the validator
-        r.data = author._original_dict
+        r.data = ORCIDWrapper(author._original_dict)
         return r
     
     def _format_validate(self, orcid_string, r):
@@ -116,3 +116,23 @@ class ORCID(plugin.Plugin):
     
     def _correct(self, s):
         return s[:4] + "-" + s[4:8] + "-" + s[8:12] + "-" + s[12:]
+
+class ORCIDWrapper(plugin.DataWrapper):
+    def __init__(self, raw):
+        self.raw = raw
+
+    def get(self, datatype):
+        pass
+
+class Name(plugin.Comparator):
+    def supports(self, datatype, **comparison_options):
+        lower = datatype.lower()
+        return lower in ["name", "author"]
+    
+    def compare(self, datatype, original, comparison, **comparison_options):
+        r = plugin.ComparisonResponse()
+        r.success = original == comparison # FIXME: primitive impl for testing purposes
+        return r
+
+
+

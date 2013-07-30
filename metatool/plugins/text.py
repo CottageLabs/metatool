@@ -1,6 +1,6 @@
 import plugin as plugin
 
-class TitleAbstract(plugin.Plugin):
+class TitleAbstract(plugin.Validator):
 
     def supports(self, datatype, *args, **kwargs):
         lower = datatype.lower()

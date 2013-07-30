@@ -2,7 +2,7 @@ import imp, os, json
 
 MODULE_EXTENSIONS = ('.py') # only interested in .py files, not pyc or pyo
 
-class Plugin(object):
+class Validator(object):
     # subclasses should override these methods with their implementations
     def supports(self, datatype, **validation_options):
         raise NotImplementedError
@@ -63,8 +63,29 @@ class ValidationResponse(object):
             return json.dumps(desc)
         else:
             return json.dumps(desc, indent=indent)
+    
+class DataWrapper(object):
+    def get(self, datatype):
+        raise NotImplementedError
         
-def load():
+
+class Comparator(object):
+    # subclasses should override these methods with their implementations
+    def supports(self, datatype, **comparison_options):
+        raise NotImplementedError
+    
+    def compare(self, datatype, original, comparison, **comparison_options):
+        raise NotImplementedError
+
+class ComparisonResponse(object):
+    def __init__(self):
+        self.success = False
+        self.provenance = None
+        self._correction = []
+        self._alternative = []
+        self.compared_with = None
+
+def load_validators():
     plugin_instances = {}
     modules = get_modules("plugins")
     for modname, modpath in modules:
@@ -73,7 +94,20 @@ def load():
         for member in members:
             attr = getattr(mod, member)
             if isinstance(attr, type):
-                if issubclass(attr, Plugin):
+                if issubclass(attr, Validator):
+                    plugin_instances[modname + "." + attr.__name__] = attr()
+    return plugin_instances
+
+def load_comparators():
+    plugin_instances = {}
+    modules = get_modules("plugins")
+    for modname, modpath in modules:
+        mod = imp.load_source(modname, os.path.join(modpath, modname + ".py"))
+        members = dir(mod)
+        for member in members:
+            attr = getattr(mod, member)
+            if isinstance(attr, type):
+                if issubclass(attr, Comparator):
                     plugin_instances[modname + "." + attr.__name__] = attr()
     return plugin_instances
 
