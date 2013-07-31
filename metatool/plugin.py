@@ -77,8 +77,6 @@ class Comparator(object):
     def compare(self, datatype, original, comparison, **comparison_options):
         raise NotImplementedError
         
-    def origin(self):
-        pass
 
 class ComparisonResponse(object):
     def __init__(self):
