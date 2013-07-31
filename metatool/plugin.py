@@ -76,6 +76,9 @@ class Comparator(object):
     
     def compare(self, datatype, original, comparison, **comparison_options):
         raise NotImplementedError
+        
+    def origin(self):
+        pass
 
 class ComparisonResponse(object):
     def __init__(self):
@@ -84,6 +87,19 @@ class ComparisonResponse(object):
         self._correction = []
         self._alternative = []
         self.compared_with = None
+    
+    def json(self, indent=None):
+        desc = {
+            "success" : self.success,
+            "provenance" : self.provenance,
+            "correction" : self._correction,
+            "alternative" : self._alternative,
+            "compared_with" :  self.compared_with
+        }
+        if indent is None:
+            return json.dumps(desc)
+        else:
+            return json.dumps(desc, indent=indent)
 
 def load_validators():
     plugin_instances = {}

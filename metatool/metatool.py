@@ -31,6 +31,7 @@ def validate_fieldset(fieldset, **validation_options):
         for datatype, values in fieldset.iteritems():       # for each field in the incoming fieldset
             
             refertos = cr.get(datatype)                     # get the dataset's reference field(s)
+            origin = cr.origin()
             if refertos is None or len(refertos) == 0:
                 continue
             
