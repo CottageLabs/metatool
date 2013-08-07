@@ -1,4 +1,5 @@
 import plugin
+from copy import deepcopy
 
 validators = plugin.load_validators()
 comparators = plugin.load_comparators()
@@ -12,8 +13,76 @@ def validate_field(datatype, value, **validation_options):
             result.provenance = name
             results.append(result)
     return results
-    
+
 def validate_fieldset(fieldset, **validation_options):
+    # first task is to validate all the individual fields, which may
+    # also obtain from us some data to cross-reference
+    for field in fieldset.fields():
+        datatype = fieldset.datatype(field)
+        for value in fieldset.values(field):
+            results = validate_field(datatype, value, **validation_options)
+            fieldset.results(field, value, results)
+
+    # see if there's any crossreferencing we can do
+    crossref_data = fieldset.get_crossref_data()
+    if len(crossref_data) == 0:
+        return
+    
+    # cross reference each field where possible
+    for field in fieldset.fields():
+        crossref = fieldset.crossref(field)
+        
+        # prune out all the comparator plugins that don't apply
+        comparator_plugins = {}
+        for name, comparator in comparators.iteritems():
+            if comparator.supports(crossref):
+                comparator_plugins[name] = comparator
+        if len(comparator_plugins.keys()) == 0:
+            continue
+        
+        additionals = {}
+        field_comparison_register = {}
+        for cr in crossref_data:
+            compare = cr.get(crossref)
+            additional = _list_compare(field_comparison_register, crossref, fieldset.values(field), compare, comparator_plugins, cr, **validation_options)
+            for a in additional:
+                _append(additionals, a, cr.source_name())
+        
+        if len(field_comparison_register.keys()) > 0: 
+            fieldset.comparisons(field, field_comparison_register)
+        
+        if len(additionals.keys()) > 0:
+            fieldset.additionals(field, additionals)
+    
+
+def _list_compare(comparison_register, datatype, original, compare, comparator_plugins, data_source, **comparison_options):
+    additional = deepcopy(compare)
+    for o in original:
+        for c in compare:
+            for name, p in comparator_plugins.iteritems():
+                result = p.compare(datatype, o, c, **comparison_options)
+                result.compared_with = c
+                result.comparator = name
+                result.data_source = data_source.source_name()
+                if result.success:
+                    _append(comparison_register, o, result)
+                    if o in additional:
+                        additional.remove(o)
+                        
+        # if we don't get any successful hits, record a blank result for the value
+        if o not in comparison_register:
+            comparison_register[o] = []
+            
+    return additional
+
+def _append(d, k, v):
+    if k in d:
+        d[k].append(v)
+    else:
+        d[k] = [v]                
+
+"""
+def validate_fieldset_old(fieldset, **validation_options):
 
     # first validate each of the datatype/value pairs independently
     field_validation_results = {}
@@ -58,7 +127,7 @@ def validate_fieldset(fieldset, **validation_options):
                         field_validation_results[datatype][value] += value_results
     
     return field_validation_results
-
+"""
 
 def validate_model(modeltype, model_stream, **validation_options):
     fieldsets = None
@@ -68,8 +137,9 @@ def validate_model(modeltype, model_stream, **validation_options):
             break
     
     for fieldset in fieldsets:
-        # validate_fieldset(fieldset, **validation_options)
-        print fieldset
+        validate_fieldset(fieldset, **validation_options)
+    
+    return fieldsets
 
 
 

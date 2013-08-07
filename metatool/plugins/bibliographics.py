@@ -71,6 +71,10 @@ class ISBN(plugin.Validator):
         r = plugin.ValidationResponse()
         return self.validate_format(datatype, isbn, validation_response=r)
     
+    def validate(self, datatype, isbn, *args, **kwargs):
+        r = plugin.ValidationResponse()
+        return self.validate_format(datatype, isbn, validation_response=r)
+    
     def validate_format(self, datatype, isbn, *args, **kwargs):
         r = kwargs.get("validation_response", plugin.ValidationResponse())
     

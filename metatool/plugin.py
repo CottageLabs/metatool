@@ -65,6 +65,9 @@ class ValidationResponse(object):
             return json.dumps(desc, indent=indent)
     
 class DataWrapper(object):
+    def source_name(self):
+        raise NotImplementedError
+
     def get(self, datatype):
         raise NotImplementedError
         
@@ -81,17 +84,20 @@ class Comparator(object):
 class ComparisonResponse(object):
     def __init__(self):
         self.success = False
-        self.provenance = None
+        self.comparator = None
+        self.data_source = None
         self._correction = []
-        self._alternative = []
         self.compared_with = None
+    
+    def correction(self, correction):
+        self._correction.append(correction)
     
     def json(self, indent=None):
         desc = {
             "success" : self.success,
-            "provenance" : self.provenance,
+            "comparator" : self.comparator,
             "correction" : self._correction,
-            "alternative" : self._alternative,
+            "data_source" : self.data_source,
             "compared_with" :  self.compared_with
         }
         if indent is None:
@@ -132,10 +138,50 @@ class FieldSet(object):
         self.fieldset[field_name]["values"] = values
         if crossref is not None:
             self.fieldset[field_name]["crossref"] = crossref
-
+    
+    def fields(self):
+        return self.fieldset.keys()
+        
+    def values(self, field_name):
+        return self.fieldset.get(field_name, {}).get("values", [])
+        
+    def datatype(self, field_name):
+        return self.fieldset.get(field_name, {}).get("datatype")
+        
+    def crossref(self, field_name):
+        return self.fieldset.get(field_name, {}).get("crossref")
+    
+    def comparisons(self, field_name, comparisons):
+        self._ensure(field_name)
+        self.fieldset[field_name]["comparison"] = comparisons
+        
+    def additionals(self, field_name, additionals):
+        self._ensure(field_name)
+        self.fieldset[field_name]["additional"] = additionals
+    
+    def results(self, field_name, value, results):
+        self._ensure(field_name)
+        self.fieldset[field_name]["validation"][value] = results
+    
+    def get_crossref_data(self):
+        cross_reference = []
+        for field, obj in self.fieldset.iteritems():
+            for value, validation_results in obj.get("validation", {}).iteritems():
+                for r in validation_results:
+                    if r.data is not None and isinstance(r.data, DataWrapper):
+                        cross_reference.append(r.data)
+        return cross_reference
+    
     def _ensure(self, field_name):
         if field_name not in self.fieldset:
-            self.fieldset[field_name] = {"datatype" : None, "values" : [], "crossref" : None}
+            self.fieldset[field_name] = {
+                "datatype" : None, 
+                "values" : [], 
+                "crossref" : None, 
+                "validation" : {},
+                "comparison" : {},
+                "additional" : {}
+            }
 
 def load_validators():
     return _load(Validator)

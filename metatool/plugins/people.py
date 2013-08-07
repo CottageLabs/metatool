@@ -121,17 +121,22 @@ class ORCIDWrapper(plugin.DataWrapper):
     def __init__(self, raw):
         self.raw = raw
 
+    def source_name(self):
+        return "orcid"
+
     def get(self, datatype):
         got = []
         lower = datatype.lower()
         if lower in ["name", "author"]:
             cn = self.raw.get("orcid-profile", {}).get("orcid-bio", {}).get("personal-details", {}).get("credit-name", {}).get("value")
-            if cn is not None:
+            if cn is not None and cn not in got:
                 got.append(cn)
             gn = self.raw.get("orcid-profile", {}).get("orcid-bio", {}).get("personal-details", {}).get("given-names", {}).get("value")
             fn = self.raw.get("orcid-profile", {}).get("orcid-bio", {}).get("personal-details", {}).get("family-name", {}).get("value")
             if gn is not None and fn is not None:
-                got.append(gn + " " + fn)
+                full = gn + " " + fn
+                if full not in got:
+                    got.append(full)
         return got
 
 class Name(plugin.Comparator):
