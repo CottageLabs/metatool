@@ -2,6 +2,7 @@ import plugin
 
 validators = plugin.load_validators()
 comparators = plugin.load_comparators()
+generators = plugin.load_generators()
 
 def validate_field(datatype, value, **validation_options):
     results = []
@@ -57,6 +58,55 @@ def validate_fieldset(fieldset, **validation_options):
                         field_validation_results[datatype][value] += value_results
     
     return field_validation_results
-                    
+
+
+def validate_model(modeltype, model_stream, **validation_options):
+    fieldsets = None
+    for name, genny in generators.iteritems():
+        if genny.supports(modeltype, **validation_options):
+            fieldsets = genny.generate(modeltype, model_stream, **validation_options)
+            break
+    
+    for fieldset in fieldsets:
+        # validate_fieldset(fieldset, **validation_options)
+        print fieldset
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                             
                     

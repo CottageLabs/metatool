@@ -99,20 +99,54 @@ class ComparisonResponse(object):
         else:
             return json.dumps(desc, indent=indent)
 
+class Generator(object):
+    # subclasses should override these methods with their implementations
+    def supports(self, modeltype, **generator_options):
+        raise NotImplementedError
+        
+    def generate(self, modeltype, model_stream, **generator_options):
+        raise NotImplementedError
+
+class FieldSet(object):
+    def __init__(self):
+        self.fieldset = {}
+        
+    def add(self, field_name, value):
+        self._ensure(field_name)
+        if value not in self.fieldset[field_name]["values"]:
+            self.fieldset[field_name]["values"].append(value)
+    
+    def datatype(self, field_name, datatype):
+        self._ensure(field_name)
+        self.fieldset[field_name]["datatype"] = datatype
+    
+    def crossref(self, field_name, crossref):
+        self._ensure(field_name)
+        self.fieldset[field_name]["crossref"] = crossref
+    
+    def field(self, field_name, datatype, values, crossref=None):
+        if type(values) != list:
+            values = [values]
+        self._ensure(field_name)
+        self.fieldset[field_name]["datatype"] = datatype
+        self.fieldset[field_name]["values"] = values
+        if crossref is not None:
+            self.fieldset[field_name]["crossref"] = crossref
+
+    def _ensure(self, field_name):
+        if field_name not in self.fieldset:
+            self.fieldset[field_name] = {"datatype" : None, "values" : [], "crossref" : None}
+
 def load_validators():
-    plugin_instances = {}
-    modules = get_modules("plugins")
-    for modname, modpath in modules:
-        mod = imp.load_source(modname, os.path.join(modpath, modname + ".py"))
-        members = dir(mod)
-        for member in members:
-            attr = getattr(mod, member)
-            if isinstance(attr, type):
-                if issubclass(attr, Validator):
-                    plugin_instances[modname + "." + attr.__name__] = attr()
-    return plugin_instances
+    return _load(Validator)
 
 def load_comparators():
+    return _load(Comparator)
+
+def load_generators():
+    return _load(Generator)
+
+def _load(klazz):
     plugin_instances = {}
     modules = get_modules("plugins")
     for modname, modpath in modules:
@@ -121,7 +155,7 @@ def load_comparators():
         for member in members:
             attr = getattr(mod, member)
             if isinstance(attr, type):
-                if issubclass(attr, Comparator):
+                if issubclass(attr, klazz):
                     plugin_instances[modname + "." + attr.__name__] = attr()
     return plugin_instances
 
