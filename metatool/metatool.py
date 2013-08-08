@@ -81,54 +81,6 @@ def _append(d, k, v):
     else:
         d[k] = [v]                
 
-"""
-def validate_fieldset_old(fieldset, **validation_options):
-
-    # first validate each of the datatype/value pairs independently
-    field_validation_results = {}
-    cross_reference = []
-    for datatype, values in fieldset.iteritems():
-        field_validation_results[datatype] = {}
-        for value in values:
-            results = validate_field(datatype, value)
-            field_validation_results[datatype][value] = results
-            for r in results:
-                if r.data is not None and isinstance(r.data, plugin.DataWrapper):
-                    cross_reference.append(r.data)
-    
-    # now cross reference the fieldset as a whole with data collected during validation
-    for cr in cross_reference:                              # for each dataset to cross reference against
-        for datatype, values in fieldset.iteritems():       # for each field in the incoming fieldset
-            
-            refertos = cr.get(datatype)                     # get the dataset's reference field(s)
-            if refertos is None or len(refertos) == 0:
-                continue
-            
-            for name, comparator in comparators.iteritems():    # for each comparator plugin    
-                if not comparator.supports(datatype, **validation_options):    # check the plugin supports this datatype
-                    continue
-                
-                for value in values:                            # for each value in the fieldset
-                    value_results = []
-                    success_results = []
-                    for referto in refertos:                      # for each comparison field in the reference set
-                        result = comparator.compare(datatype, value, referto, **validation_options) # pass the value and the reference in
-                        result.provenance = name
-                        result.compared_with = referto
-                        value_results.append(result)
-                        if result.success:
-                            success_results.append(result)
-                    
-                    if len(success_results) > 0:                
-                        # if the field was successfully validated, record the successes, as they may contain useful info
-                        field_validation_results[datatype][value] += success_results
-                    else:
-                        # if the field could not be validated against any of the references, record all failures
-                        field_validation_results[datatype][value] += value_results
-    
-    return field_validation_results
-"""
-
 def validate_model(modeltype, model_stream, **validation_options):
     fieldsets = None
     for name, genny in generators.iteritems():
@@ -142,8 +94,154 @@ def validate_model(modeltype, model_stream, **validation_options):
     return fieldsets
 
 
+def fieldsets_to_html(fieldsets):
+    frag = ""
+    for fieldset in fieldsets:
+        frag += fieldset_to_html(fieldset)
+    return frag
 
+def fieldset_to_html(fieldset):
+    entries = _fieldset_to_result_entries(fieldset)
+    
+    tables = []
+    for entry in entries:
+        tables.append(_result_entry_to_table(entry))
+    
+    return "\n\n".join(tables)
 
+def _result_entry_to_table(entry):
+    frag = "<table border='1'>"
+    
+    # header row
+    header = entry[0]
+    frag += "<thead><tr>"
+    frag += "<td class='field'>" + header[0] + "</td>"
+    frag += "<td class='value'>" + header[1] + "</td>"
+    frag += "<td class='datatype'>" + header[2] + "</td>"
+    frag += "<td class='crossref'>" + header[3] + "</td>"
+    frag += "</tr></thead><tbody>"
+    
+    # success row
+    success = entry[1]
+    success_message = "Successfully Validated" if success[0] == "pass" else "Validated with Warnings" if success[0] == "pass_warn" else "Failed to Validate"
+    
+    cr_frag = ""
+    if len(success[1]) == 0:
+        cr_frag = "<p class='successful_crossref_none'>Field was not (successfully) cross-referenced against external sources</p>"
+    else:
+        cr_frag = "<p class='successful_crossref_title'>Successfully cross-referenced with</p>"
+        for cw, prov in success[1]:
+            cr_frag += "<p><span class='successful_crossref_entry'>" + cw + "</span><span class='successful_crossref_prov'> - " + prov + "</span></p>"
+    
+    frag += "<tr>"
+    frag += "<td colspan='2' class='overall_success " + success[0] + "'>" + success_message + "</td>"
+    frag += "<td colspan='2' class='successful_crossref'>" + cr_frag + "</td>"
+    frag += "</tr>"
+    
+    # corrections and alternatives
+    ca_row = entry[2]
+    corr_frag = ""
+    if len(ca_row[0]) == 0:
+        corr_frag = "<p class='correction_none'>No proposed corrections</p>"
+    else:
+        corr_frag = "<p class='correction_title'>Proposed corrections</p>"
+        for corr, prov in ca_row[0]:
+            corr_frag += "<p><span class='correction_option'>" + corr + "</span><span class='correction_prov'> - " + prov + "</span></p>"
+    
+    alt_frag = ""
+    if len(ca_row[1]) == 0:
+        alt_frag = "<p class='alternatives_none'>No alternative suggestions for this field</p>"
+    else:
+        alt_frag = "<p class='alternatives_title'>Additional/Alternative values you may consider</p>"
+        for alt, prov in ca_row[1]:
+            alt_frag += "<p><span class='alternative_option'>" + alt + "</span><span class='alternative_prov'>" + prov + "</span></p>"
+    
+    frag += "<tr>"
+    frag += "<td colspan='2' class='corrections'>" + corr_frag + "</td>"
+    frag += "<td colspan='2' class='alternatives'>" + alt_frag + "</td>"
+    frag += "</tr>"
+    
+    # info, warn, error
+    iwe = entry[3]
+    frag += "<tr><td colspan='4' class='messages'><ul>"
+    for info, prov in iwe[0]:
+        frag += "<li class='info'><span class='info_message'>INFO: " + info + "</span><span class='info_prov'> - " + prov + "</span></li>"
+    for warn, prov in iwe[1]:
+        frag += "<li class='warn'><span class='warn_message'>WARN: " + warn + "</span><span class='warn_prov'> - " + prov + "</span></li>"
+    for error, prov in iwe[2]:
+        frag += "<li class='error'><span class='error_message'>ERROR: " + error + "</span><span class='error_prov'> - " + prov + "</span></li>"
+    frag += "</ul></td></tr>"
+    
+    frag += "</tbody></table>"
+    return frag
+
+def _fieldset_to_result_entries(fieldset):
+    entries = []
+    for field in fieldset.fields():
+        for value in fieldset.values(field):
+            
+            # create a header row
+            header_row = [field, value, fieldset.datatype(field), fieldset.crossref(field)]
+            
+            validations = fieldset.get_validations(field, value)
+            comparisons = fieldset.get_comparisons(field, value)
+            
+            # obtain all of the corrections and alternatives
+            corrections = []
+            alternatives = []
+            for v in validations:
+                cs = v.get_corrections()
+                prov = v.provenance
+                for c in cs:
+                    corrections.append((c, prov))
+                alts = v.get_alternatives()
+                for a in alts:
+                    alternatives.append((a, prov))
+            for co in comparisons:
+                cs = co.get_corrections()
+                prov = co.data_source
+                for c in cs:
+                    corrections.append((c, prov))
+            
+            # now write the corrections and alternatives row    
+            ca_row = [corrections, alternatives]
+            
+            # now get the info, warn and error messages
+            info = []
+            warn = []
+            error = []
+            for v in validations:
+                ins = v.get_info()
+                wrns = v.get_warn()
+                errs = v.get_error()
+                prov = v.provenance
+                for i in ins:
+                    info.append((i, prov))
+                for w in wrns:
+                    warn.append((w, prov))
+                for e in errs:
+                    error.append((e, prov))
+            
+            message_row = [info, warn, error]
+            
+            # calculate the overall validation success
+            success = "pass"
+            if len(error) > 0:
+                success = "fail"
+            elif len(warn) > 0:
+                success = "pass_warn"
+            
+            # look for successful cross-references to report on
+            crossrefs = []
+            for co in comparisons:
+                crossrefs.append((co.compared_with, co.data_source))
+            
+            success_row = [success, crossrefs]
+            
+            row_block = [header_row, success_row, ca_row, message_row]
+            entries.append(row_block)
+            
+    return entries
 
 
 

@@ -35,17 +35,35 @@ class ValidationResponse(object):
     def info(self, info):
         self._info.append(info)
     
+    def get_info(self):
+        return self._info
+    
     def warn(self, warn):
         self._warn.append(warn)
         
+    def get_warn(self):
+        return self._warn
+    
+    def has_warnings(self):
+        return len(self._warn) > 0
+    
     def error(self, error):
         self._error.append(error)
+    
+    def get_error(self):
+        return self._error
         
     def has_errors(self):
         return len(self._error) > 0
     
     def correction(self, correction):
         self._correction.append(correction)
+        
+    def get_corrections(self):
+        return self._correction
+        
+    def get_alternatives(self):
+        return self._alternative
     
     def alternative(self, alt):
         self._alternative.append(alt)
@@ -91,6 +109,9 @@ class ComparisonResponse(object):
     
     def correction(self, correction):
         self._correction.append(correction)
+    
+    def get_corrections(self):
+        return self._correction
     
     def json(self, indent=None):
         desc = {
@@ -150,6 +171,12 @@ class FieldSet(object):
         
     def crossref(self, field_name):
         return self.fieldset.get(field_name, {}).get("crossref")
+    
+    def get_validations(self, field_name, value):
+        return self.fieldset.get(field_name, {}).get("validation", {}).get(value, [])
+    
+    def get_comparisons(self, field_name, value):
+        return self.fieldset.get(field_name, {}).get("comparison", {}).get(value, [])
     
     def comparisons(self, field_name, comparisons):
         self._ensure(field_name)
