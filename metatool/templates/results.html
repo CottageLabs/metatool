@@ -1,0 +1,143 @@
+<html>
+
+<head>
+<title>metatool - results</title>
+
+<style type="text/css">
+
+table {
+    border-collapse:collapse;
+    width: 100%;
+    margin-bottom: 30px;
+}
+
+table,th, td {
+    border: 1px solid black;
+}
+
+td {
+    padding: 5px;
+    vertical-align: top;
+}
+
+thead {
+    background: #aaaaff;
+}
+
+.field {
+    font-weight: bold;
+}
+
+.datatype {
+    font-style: italic;
+}
+
+.crossref {
+    font-style: italic;
+}
+
+.pass {
+    color: #00aa00;
+    font-weight: bold;
+}
+
+.pass_warn {
+    color: #ffff00;
+    font-weight: bold;
+}
+
+.fail {
+    color: #ff0000;
+    font-weight: bold;
+}
+
+.unvalidated {
+    color: #cccccc;
+    font-weight: bold;
+}
+
+.successful_crossref_none {
+    color: #cccccc;
+    font-weight: bold;
+}
+
+.successful_crossref_fail {
+    color: #ff0000;
+    font-weight: bold;
+}
+
+.successful_crossref_title {
+    color: #00aa00;
+    font-weight: bold;
+}
+
+.alternative_option {
+    font-weight: bold;
+}
+
+.alternative_prov {
+    font-style: italic;
+    color: #cccccc;
+}
+
+.correction_option {
+    font-weight: bold;
+}
+
+.correction_prov {
+    font-style: italic;
+    color: #cccccc;
+}
+
+.messages_title {
+    font-weight: bold;
+}
+
+.no_messages {
+    color: #cccccc;
+}
+
+.info_message {
+    font-weight: bold;
+    color: #0000ff;
+}
+
+.info_prov {
+    font-style: italic;
+    color: #cccccc;
+}
+
+.warn_message {
+    font-weight: bold;
+    color: #aa00aa;
+}
+
+.warn_prov {
+    font-style: italic;
+    color: #cccccc;
+}
+
+.error_message {
+    font-weight: bold;
+    color: #ff0000;
+}
+
+.error_prov {
+    font-style: italic;
+    color: #cccccc;
+}
+
+</style>
+
+</head>
+
+<body>
+
+{% autoescape false %}
+{{tables}}
+{% endautoescape %}
+
+</body>
+
+</html>
+

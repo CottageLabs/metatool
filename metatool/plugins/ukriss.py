@@ -63,7 +63,7 @@ class OutputsModel(plugin.Generator):
             lang = title.get("cfLangCode")
             if lang is not None:
                 titlelang = plugin.FieldSet()
-                titlelang.field("cdTitle/cfLangCode", "iso-639-1", lang, "language")
+                titlelang.field("cfTitle/cfLangCode", "iso-639-1", lang, "language")
                 fieldsets.append(titlelang)
         
         abstract = rp.find(self.NS + "cfAbstr")
@@ -73,7 +73,7 @@ class OutputsModel(plugin.Generator):
             lang = abstract.get("cfLangCode")
             if lang is not None:
                 abslang = plugin.FieldSet()
-                abslang.field("cdAbstract/cfLangCode", "iso-639-1", lang, "language")
+                abslang.field("cfAbstract/cfLangCode", "iso-639-1", lang, "language")
                 fieldsets.append(abslang)
         
         classes = rp.findall(self.NS + "cfResPubl_Class")

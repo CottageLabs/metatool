@@ -176,7 +176,10 @@ class FieldSet(object):
         return self.fieldset.get(field_name, {}).get("validation", {}).get(value, [])
     
     def get_comparisons(self, field_name, value):
-        return self.fieldset.get(field_name, {}).get("comparison", {}).get(value, [])
+        return self.fieldset.get(field_name, {}).get("comparison", {}).get(value) # return a None if there were no comparisons
+        
+    def has_comparisons(self, field_name, value):
+        return value in self.fieldset.get(field_name, {}).get("comparison", {})
     
     def comparisons(self, field_name, comparisons):
         self._ensure(field_name)
