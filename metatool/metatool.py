@@ -1,4 +1,4 @@
-import plugin
+import plugin as plugin
 from copy import deepcopy
 
 validators = plugin.load_validators()

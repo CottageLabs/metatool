@@ -1,5 +1,7 @@
-import plugin as plugin
+import metatool.plugin as plugin
 import re
+from metatool.plugins import acat
+from metatool.plugins import text
 
 class ISSN(plugin.Validator):
     rx_1 = "\d{4}-\d{3}[0-9X]"
@@ -10,11 +12,29 @@ class ISSN(plugin.Validator):
     
     def validate(self, datatype, issn, *args, **kwargs):
         r = plugin.ValidationResponse()
-        return self.validate_format(datatype, issn, validation_response=r)
-    
-    def validate_format(self, datatype, issn, *args, **kwargs):
-        r = kwargs.get("validation_response", plugin.ValidationResponse())
         
+        # first do the format validation - layout, hyphenation, checksum, etc.
+        self._format_validate(issn, r)
+        
+        # then go and check the ACAT
+        return self.validate_realism(datatype, issn, validation_response=r)
+    
+    def validate_format(self, datatype, issn, *args, **validation_options):
+        r = kwargs.get("validation_response", plugin.ValidationResponse())
+        oid = self._format_validate(issn, r)
+        return r
+    
+    def validate_realism(self, datatype, issn, *args, **kwargs):
+        r = kwargs.get("validation_response", plugin.ValidationResponse())
+        journals = acat.search(issn=[issn])
+        if journals is None or len(journals) == 0:
+            r.warn("Unable to locate ISSN in the ACAT - this does not mean it is not real, but it reduces the chances")
+        else:
+            r.info("ISSN was found in the ACAT")
+            r.data = acat.ACATWrapper(journals)
+        return r
+    
+    def _format_validate(self, issn, r):
         # attempt format validation based on regular expressions first
         m = re.match(self.rx_1, issn)
         if m is None:
@@ -40,16 +60,6 @@ class ISSN(plugin.Validator):
         digits = issn.replace("-", "")
         remainder = sum([int(b) * (8 - int(a)) for a, b in enumerate(digits) if a < 7]) % 11
         
-        """
-        total = 0
-        multiplier = 8
-        for c in checkon:
-            total += int(c) * multiplier
-            multiplier -= 1
-        
-        remainder = total % 11
-        """
-        
         if remainder == 0:
             return "0"
         check = 11 - remainder
@@ -57,7 +67,55 @@ class ISSN(plugin.Validator):
             return "X"
         return str(check)
 
+# ISSN Compare is a Comparator implementation, which looks for exact equivalence
+class ISSNCompare(text.Equivalent):
+    def supports(self, datatype, **comparison_options):
+        lower = datatype.lower()
+        return lower in ["issn"]
 
+# Journal compare is a Comparator implementation, which uses Levenshtein distance to 
+# decide on a match
+class JournalCompare(text.LevenshteinDistance):
+    def supports(self, datatype, **comparison_options):
+        lower = datatype.lower()
+        return lower in ["journal", "journal_name", "journal_title"]
+
+class JournalName(plugin.Validator):
+    def supports(self, datatype, *args, **kwargs):
+        return datatype.lower() in ["journal", "journal_name", "journal_title"]
+
+    def validate(self, datatype, journal, *args, **kwargs):
+        r = plugin.ValidationResponse()
+        if kwargs is None:
+            kwargs = {}
+        kwargs["validation_response"] = r
+        
+        # first do the format validation - layout, hyphenation, checksum, etc.
+        self.validate_format(datatype, journal, *args, **kwargs)
+        
+        # if the format validate fails, we don't do the realisim validation
+        if r.has_errors():
+            return r
+        
+        # else go and check the ACAT
+        return self.validate_realism(datatype, journal, *args, **kwargs)
+    
+    def validate_format(self, datatype, journal, *args, **validation_options):
+        r = validation_options.get("validation_response", plugin.ValidationResponse())
+        # just check that it is not the empty string?
+        if journal == "":
+            r.error("Journal string is the empty string")
+        return r
+    
+    def validate_realism(self, datatype, journal, *args, **kwargs):
+        r = kwargs.get("validation_response", plugin.ValidationResponse())
+        journals = acat.search(journal_title=[journal])
+        if journals is None or len(journals) == 0:
+            r.warn("Unable to locate Journal in the ACAT - this does not mean it is not real, but it reduces the chances")
+        else:
+            r.info("Journal was found in the ACAT")
+            r.data = acat.ACATWrapper(journals)
+        return r
 
 class ISBN(plugin.Validator):
     rx_10 = "\d{9}[0-9X]"

@@ -224,7 +224,7 @@ def load_generators():
 
 def _load(klazz):
     plugin_instances = {}
-    modules = get_modules("plugins")
+    modules = get_modules("metatool.plugins")
     for modname, modpath in modules:
         mod = imp.load_source(modname, os.path.join(modpath, modname + ".py"))
         members = dir(mod)
@@ -235,12 +235,20 @@ def _load(klazz):
                     plugin_instances[modname + "." + attr.__name__] = attr()
     return plugin_instances
 
-def get_modules(package_name):
-    file, pathname, description = imp.find_module(package_name)
+def get_modules(package_heirarchy):
+    bits = package_heirarchy.split(".")
+    parent_path = None
+    file = path = description = None
+    for bit in bits:
+        file, path, description = imp.find_module(bit, parent_path)
+        mod = imp.load_module(bit, file, path, description)
+        parent_path = mod.__path__
+    
+    # file, pathname, description = imp.find_module(package_name)
     if file:
-        raise ImportError('Not a package: %r', package_name)
+        raise ImportError('Not a package: %r', package_heirarchy)
         
     # Use a set because some may be both source and compiled.
-    return [(os.path.splitext(module)[0], pathname)
-        for module in os.listdir(pathname)
+    return [(os.path.splitext(module)[0], path)
+        for module in os.listdir(path)
         if module.endswith(MODULE_EXTENSIONS) and module != "__init__.py"]

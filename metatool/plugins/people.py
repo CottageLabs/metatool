@@ -1,4 +1,4 @@
-import plugin
+import metatool.plugin as plugin
 import orcid, re
 
 class ORCID(plugin.Validator):

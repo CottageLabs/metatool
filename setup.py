@@ -6,7 +6,9 @@ setup(
     packages = find_packages(),
     install_requires = [
             "orcid-python",
-            "lxml"
+            "lxml",
+            "catflap",
+            "python-Levenshtein"
 		]
 )
 

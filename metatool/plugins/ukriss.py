@@ -1,4 +1,4 @@
-import plugin as plugin
+import metatool.plugin as plugin
 
 from lxml import etree
 

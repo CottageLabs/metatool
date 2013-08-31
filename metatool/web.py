@@ -1,5 +1,5 @@
 from flask import Flask, request, abort, render_template, make_response
-import metatool
+from metatool import metatool
 
 app = Flask(__name__)
 
