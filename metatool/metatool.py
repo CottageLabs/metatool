@@ -1,5 +1,6 @@
 import plugin as plugin
 from copy import deepcopy
+import config
 
 validators = plugin.load_validators()
 comparators = plugin.load_comparators()
@@ -25,12 +26,14 @@ def validate_fieldset(fieldset, **validation_options):
 
     # see if there's any crossreferencing we can do
     crossref_data = fieldset.get_crossref_data()
+    print crossref_data
     if len(crossref_data) == 0:
         return
     
     # cross reference each field where possible
     for field in fieldset.fields():
         crossref = fieldset.crossref(field)
+        print "cross-referencing fieldset field", field, "as", crossref
         
         # prune out all the comparator plugins that don't apply
         comparator_plugins = {}
@@ -44,6 +47,9 @@ def validate_fieldset(fieldset, **validation_options):
         field_comparison_register = {}
         for cr in crossref_data:
             compare = cr.get(crossref)
+            if compare is None or len(compare) == 0:
+                continue
+            print "comparing with", compare
             additional = _list_compare(field_comparison_register, crossref, fieldset.values(field), compare, comparator_plugins, cr, **validation_options)
             for a in additional:
                 _append(additionals, a, cr.source_name())
@@ -139,7 +145,7 @@ def _result_entry_to_table(entry):
     else:
         cr_frag = "<p class='successful_crossref_title'>Successfully cross-referenced with</p>"
         for cw, prov in success[1]:
-            cr_frag += "<p><span class='successful_crossref_entry'>" + cw + "</span><span class='successful_crossref_prov'> - " + prov + "</span></p>"
+            cr_frag += "<p class='successful_crossref_entries'><span class='successful_crossref_entry'>" + cw + "</span><span class='successful_crossref_prov'> - " + prov + "</span></p>"
     
     frag += "<tr>"
     frag += "<td colspan='2' class='overall_success " + success[0] + "'>" + success_message + "</td>"

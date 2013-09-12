@@ -1,6 +1,7 @@
 import imp, os, json
+import config
 
-MODULE_EXTENSIONS = ('.py') # only interested in .py files, not pyc or pyo
+MODULE_EXTENSIONS = ('.py',) # only interested in .py files, not pyc or pyo
 
 class Validator(object):
     # subclasses should override these methods with their implementations
@@ -223,6 +224,21 @@ def load_generators():
     return _load(Generator)
 
 def _load(klazz):
+    # load the plugins from the plugin directory
+    names = [os.path.splitext(module)[0] for module in os.listdir(config.PLUGIN_DIR) if module.endswith(MODULE_EXTENSIONS) and module != "__init__.py"]
+    plugin_instances = {}
+    for name in names:
+        mod = imp.load_source(name, os.path.join(config.PLUGIN_DIR, name + ".py"))
+        members = dir(mod)
+        for member in members:
+            attr = getattr(mod, member)
+            if isinstance(attr, type):
+                if issubclass(attr, klazz):
+                    plugin_instances[name + "." + attr.__name__] = attr()
+    return plugin_instances
+
+
+def _loadold(klazz):
     plugin_instances = {}
     modules = get_modules("metatool.plugins")
     for modname, modpath in modules:

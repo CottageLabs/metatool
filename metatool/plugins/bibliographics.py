@@ -1,7 +1,24 @@
-import metatool.plugin as plugin
-import re
-from metatool.plugins import acat
-from metatool.plugins import text
+try:
+    import metatool.plugin as plugin
+except ImportError:
+    import plugin as plugin
+
+try:
+    from metatool.plugins import acat
+except ImportError:
+    from plugins import acat
+
+try:
+    from metatool.plugins import text
+except ImportError:
+    from plugins import text
+
+try:
+    from metatool.plugins import number
+except ImportError:
+    from plugins import number
+
+import re, requests, json
 
 class ISSN(plugin.Validator):
     rx_1 = "\d{4}-\d{3}[0-9X]"
@@ -175,7 +192,237 @@ class ISBN(plugin.Validator):
     def _checksum13(self, isbn13):
         remainder = (10 - (sum(int(digit) * (3 if idx % 2 else 1) for idx, digit in enumerate(isbn13[:12])) % 10)) % 10
         return str(remainder)
+
+
+class DOI(plugin.Validator):
+    rx = "^((http:\/\/){0,1}dx.doi.org/|(http:\/\/){0,1}hdl.handle.net\/|doi:|info:doi:){0,1}(?P<id>10\\..+\/.+)"
+    
+    def supports(self, datatype, *args, **kwargs):
+        lower = datatype.lower()
+        return lower in ["doi"]
         
+        result = re.match(rx, bibjson_identifier["id"])
+    
+    def validate(self, datatype, doi, *args, **kwargs):
+        r = plugin.ValidationResponse()
+        
+        # first do the format validation
+        kwargs["validation_response"] = r
+        self.validate_format(datatype, doi, *args, **kwargs)
+        
+        # then go and check the ACAT
+        return self.validate_realism(datatype, doi, *args, **kwargs)
+    
+    def validate_format(self, datatype, doi, *args, **kwargs):
+        r = kwargs.get("validation_response", plugin.ValidationResponse())
+        result = re.match(self.rx, doi)
+        if result is None:
+            r.error("DOI does not match the form of a DOI")
+        else:
+            r.info("DOI meets the format criteria")
+        return r
+    
+    def validate_realism(self, datatype, doi, *args, **kwargs):
+        r = kwargs.get("validation_response", plugin.ValidationResponse())
+        
+        # make the doi into something we can de-reference at dx.doi.org
+        result = re.match(self.rx, doi)
+        if result is None:
+            # no need for a message, format check picks this up
+            return
+        
+        # create the canonical version
+        deref = "http://dx.doi.org/" + result.group(4)
+        
+        # make a request to the doi.org server, to see if there is a record
+        # and if there is one, get back a json version of the data in this csl format
+        resp = requests.get(deref, headers={"accept" : "application/vnd.citationstyles.csl+json"})
+        
+        if resp.status_code >= 400 and resp.status_code < 500:
+            r.error("Unable to locate DOI in the doi.org redirect service, so even if this DOI is real, it is broken")
+        elif resp.status_code >= 500:
+            r.warn("doi.org redirect threw a server error on retrieving this DOI - it's probably not your fault")
+        else:
+            r.info("doi.org successfully responded to this DOI")
+            r.data = CrossRefCSL(resp.text)
+        
+        return r
+
+class DOICompare(plugin.Comparator):
+    rx = "^((http:\/\/){0,1}dx.doi.org/|(http:\/\/){0,1}hdl.handle.net\/|doi:|info:doi:){0,1}(?P<id>10\\..+\/.+)"
+    
+    def supports(self, datatype, **comparison_options):
+        lower = datatype.lower()
+        return lower in ["doi", "publication_identifier"]
+    
+    def compare(self, datatype, original, comparison, **comparison_options):
+        r = plugin.ComparisonResponse()
+        
+        # first get the raw doi out of the original
+        original_result = re.match(self.rx, original)
+        if original_result is None:
+            # could not match doi to regex, so match failed
+            r.success = False
+            return r
+        
+        # now get the raw doi out of the comparison
+        comparison_result = re.match(self.rx, original)
+        if comparison_result is None:
+            # could not match doi to regex, so match failed
+            r.success = False
+            return r
+        
+        # compare the two operational parts of the DOI
+        original_doi = original_result.group(4)
+        compare_doi = comparison_result.group(4)
+        
+        # operational doi portions should be the same
+        r.success = original_doi == compare_doi
+        return r
+
+class URICompare(text.Equivalent):
+    def supports(self, datatype, **comparison_options):
+        lower = datatype.lower()
+        return lower in ["uri", "url", "publication_identifier"]
+
+class PageNumberCompare(number.IntegersEqual):
+    def supports(self, datatype, **comparison_options):
+        lower = datatype.lower()
+        return lower in ["page_count", "start_page", "end_page"]
+
+class TitleCompare(text.LevenshteinDistance):
+    def supports(self, datatype, **comparison_options):
+        lower = datatype.lower()
+        return lower in ["title"]
+
+class PublishedDateCompare(number.DatesSimilar):
+    def supports(self, datatype, **comparison_options):
+        lower = datatype.lower()
+        return lower in ["issued_date", "published_date"]
+
+class VolumeCompare(number.IntegersEqual):
+    def supports(self, datatype, **comparison_options):
+        lower = datatype.lower()
+        return lower in ["volume"]
+
+class IssueCompare(number.IntegersEqual):
+    def supports(self, datatype, **comparison_options):
+        lower = datatype.lower()
+        return lower in ["issue"]
+
+class CrossRefCSL(plugin.DataWrapper):
+    type_map = {
+        "doi" : ["DOI"],
+        "publication_identifier" : ["DOI", "URL"],
+        "uri" : ["URL"],
+        "url" : ["URL"],
+        "author" : ["author"],
+        "journal_title" : ["container-title"],
+        "journal_name" : ["container-title"],
+        "journal" : ["container-title"],
+        "issue" : ["issue"],
+        "issued_date" : ["issued"],
+        "published_date" : ["issued"],
+        "start_page" : ["page"],
+        "page_range" : ["page"],
+        "pages" : ["page"],
+        "page_count" : ["page"],
+        "end_page" : ["page"],
+        "publisher" : ["publisher"],
+        "title" : ["title"],
+        "volume" : ["volume"]
+    }
+
+    def __init__(self, raw):
+        self.raw = json.loads(raw)
+
+    def source_name(self):
+        return "crossref"
+
+    def get(self, datatype):
+        got = []
+        lower = datatype.lower()
+        
+        mapped = self.type_map.get(lower, [])
+        for m in mapped:
+            if m in ["author", "issued", "page"]:
+                if m == "author":
+                    authors = self._get_authors()
+                    got += authors
+                elif m == "issued":
+                    issued = self._get_issued()
+                    got += issued
+                elif m == "page":
+                    page = self._get_page(datatype)
+                    got.append(page)
+            else:
+                vals = self.raw.get(m)
+                if isinstance(vals, list):
+                    got += vals
+                else:
+                    got.append(vals)
+        
+        if len(got) == 0:
+            return None
+        return list(set(got))
+    
+    def _get_authors(self):
+        names = []
+        authors = self.raw.get("author", [])
+        for a in authors:
+            name = a.get("given", "") + " " + a.get("family", "")
+            name = name.strip()
+            if name != "":
+                names.append(name)
+        return names
+    
+    def _get_issued(self):
+        dates = []
+        parts = self.raw.get("issued", {}).get("date-parts", [])
+        for part in parts:
+            if len(part) == 1:
+                dates.append(str(part[0]))
+            elif len(part) == 2:
+                dates.append(str(part[0]) + "-" + str(part[1]))
+            elif len(part) == 3:
+                dates.append(str(part[0]) + "-" + str(part[1]) + "-" + str(part[2]))
+        return dates
+        
+    def _get_page(self, datatype):
+        r = self.raw.get("page")
+        if datatype in ["pages", "page_range"]:
+            return r
+        bits = r.split("-")
+        if len(bits) != 2:
+            return None
+        if datatype == "start_page":
+            return bits[0]
+        elif datatype == "end_page":
+            return bits[1]
+        elif datatype == "page_count":
+            try:
+                return int(bits[1]) - int(bits[2])
+            except:
+                return None
+
+"""
+{u'DOI': u'10.1016/S0550-3213(01)00405-9',
+ u'URL': u'http://dx.doi.org/10.1016/S0550-3213(01)00405-9',
+ u'author': [{u'family': u'McGuire', u'given': u'Scott'},
+  {u'family': u'Catterall', u'given': u'Simon'},
+  {u'family': u'Bowick', u'given': u'Mark'},
+  {u'family': u'Warner', u'given': u'Simeon'}],
+ u'container-title': u'Nuclear Physics B',
+ u'editor': [],
+ u'issue': u'3',
+ u'issued': {u'date-parts': [[2001, 11]]},
+ u'page': u'467-493',
+ u'publisher': u'Elsevier ',
+ u'title': u'The Ising model on a dynamically triangulated disk with a boundary magnetic field',
+ u'type': u'article-journal',
+ u'volume': u'614'}
+"""
+
 class ISO6391(plugin.Validator):
 
     codes = {

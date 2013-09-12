@@ -1,5 +1,8 @@
 from flask import Flask, request, abort, render_template, make_response
-from metatool import metatool
+try:
+    from metatool import metatool
+except ImportError:
+    import metatool
 
 app = Flask(__name__)
 
@@ -16,4 +19,4 @@ def validate():
     return render_template("results.html", tables=html)
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', debug=True, port=5004)
+    app.run(host='0.0.0.0', debug=True, port=5005)

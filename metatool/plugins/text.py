@@ -1,4 +1,7 @@
-import metatool.plugin as plugin
+try:
+    import metatool.plugin as plugin
+except ImportError:
+    import plugin as plugin
 import Levenshtein
 
 class TitleAbstract(plugin.Validator):

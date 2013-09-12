@@ -1,4 +1,8 @@
-import metatool.plugin as plugin
+try:
+    import metatool.plugin as plugin
+except ImportError:
+    import plugin as plugin
+
 import catflap
 
 def search(issn=[], journal_title=[]):
