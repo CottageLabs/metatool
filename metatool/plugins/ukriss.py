@@ -27,7 +27,7 @@ class OutputsModel(plugin.Generator):
         # volume number
         vol = rp.find(self.NS + "cfVol")
         if vol is not None:
-            fs.field("cfVol", "number", vol.text, "volume")
+            fs.field("cfVol", "integer", vol.text, "volume")
         
         # edition
         ed = rp.find(self.NS + "cfEdition")
@@ -42,18 +42,18 @@ class OutputsModel(plugin.Generator):
         # start page
         sp = rp.find(self.NS + "cfStartPage")
         if sp is not None:
-            fs.field("cfStartPage", "page_number", sp.text, "start_page")
+            fs.field("cfStartPage", "integer", sp.text, "start_page")
         
         # end page
         ep = rp.find(self.NS + "cfEndPage")
         if ep is not None:
-            fs.field("cfEndPage", "page_number", ep.text, "end_page")
+            fs.field("cfEndPage", "integer", ep.text, "end_page")
         
         # FIXME: we could do some validation here? total = end - start
         # total pages
         tp = rp.find(self.NS + "cfTotalPages")
         if tp is not None:
-            fs.field("cfTotalPages", "number", tp.text, "page_count")
+            fs.field("cfTotalPages", "integer", tp.text, "page_count")
         
         uri = rp.find(self.NS + "cfURI")
         if uri is not None:

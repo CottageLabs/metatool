@@ -18,7 +18,13 @@ try:
 except ImportError:
     from plugins import number
 
+try:
+    from metatool.plugins import dates
+except ImportError:
+    from plugins import dates
+
 import re, requests, json
+from lxml import etree
 
 class ISSN(plugin.Validator):
     rx_1 = "\d{4}-\d{3}[0-9X]"
@@ -200,8 +206,6 @@ class DOI(plugin.Validator):
     def supports(self, datatype, *args, **kwargs):
         lower = datatype.lower()
         return lower in ["doi"]
-        
-        result = re.match(rx, bibjson_identifier["id"])
     
     def validate(self, datatype, doi, *args, **kwargs):
         r = plugin.ValidationResponse()
@@ -236,8 +240,12 @@ class DOI(plugin.Validator):
         
         # make a request to the doi.org server, to see if there is a record
         # and if there is one, get back a json version of the data in this csl format
-        resp = requests.get(deref, headers={"accept" : "application/vnd.citationstyles.csl+json"})
-        
+        try:
+            resp = requests.get(deref, headers={"accept" : "application/vnd.citationstyles.csl+json"}, timeout=3)
+        except requests.exceptions.Timeout:
+            r.warn("Attempted to verify DOI against crossref, but request to server timed out")
+            return r
+                
         if resp.status_code >= 400 and resp.status_code < 500:
             r.error("Unable to locate DOI in the doi.org redirect service, so even if this DOI is real, it is broken")
         elif resp.status_code >= 500:
@@ -266,7 +274,7 @@ class DOICompare(plugin.Comparator):
             return r
         
         # now get the raw doi out of the comparison
-        comparison_result = re.match(self.rx, original)
+        comparison_result = re.match(self.rx, comparison)
         if comparison_result is None:
             # could not match doi to regex, so match failed
             r.success = False
@@ -290,12 +298,12 @@ class PageNumberCompare(number.IntegersEqual):
         lower = datatype.lower()
         return lower in ["page_count", "start_page", "end_page"]
 
-class TitleCompare(text.LevenshteinDistance):
+class TitleAbstractCompare(text.LevenshteinDistance):
     def supports(self, datatype, **comparison_options):
         lower = datatype.lower()
-        return lower in ["title"]
+        return lower in ["title", "abstract"]
 
-class PublishedDateCompare(number.DatesSimilar):
+class PublishedDateCompare(dates.DatesSimilar):
     def supports(self, datatype, **comparison_options):
         lower = datatype.lower()
         return lower in ["issued_date", "published_date"]
@@ -311,6 +319,27 @@ class IssueCompare(number.IntegersEqual):
         return lower in ["issue"]
 
 class CrossRefCSL(plugin.DataWrapper):
+
+    """
+    Example document:
+    
+    {u'DOI': u'10.1016/S0550-3213(01)00405-9',
+     u'URL': u'http://dx.doi.org/10.1016/S0550-3213(01)00405-9',
+     u'author': [{u'family': u'McGuire', u'given': u'Scott'},
+      {u'family': u'Catterall', u'given': u'Simon'},
+      {u'family': u'Bowick', u'given': u'Mark'},
+      {u'family': u'Warner', u'given': u'Simeon'}],
+     u'container-title': u'Nuclear Physics B',
+     u'editor': [],
+     u'issue': u'3',
+     u'issued': {u'date-parts': [[2001, 11]]},
+     u'page': u'467-493',
+     u'publisher': u'Elsevier ',
+     u'title': u'The Ising model on a dynamically triangulated disk with a boundary magnetic field',
+     u'type': u'article-journal',
+     u'volume': u'614'}
+    """
+
     type_map = {
         "doi" : ["DOI"],
         "publication_identifier" : ["DOI", "URL"],
@@ -405,24 +434,413 @@ class CrossRefCSL(plugin.DataWrapper):
             except:
                 return None
 
-"""
-{u'DOI': u'10.1016/S0550-3213(01)00405-9',
- u'URL': u'http://dx.doi.org/10.1016/S0550-3213(01)00405-9',
- u'author': [{u'family': u'McGuire', u'given': u'Scott'},
-  {u'family': u'Catterall', u'given': u'Simon'},
-  {u'family': u'Bowick', u'given': u'Mark'},
-  {u'family': u'Warner', u'given': u'Simeon'}],
- u'container-title': u'Nuclear Physics B',
- u'editor': [],
- u'issue': u'3',
- u'issued': {u'date-parts': [[2001, 11]]},
- u'page': u'467-493',
- u'publisher': u'Elsevier ',
- u'title': u'The Ising model on a dynamically triangulated disk with a boundary magnetic field',
- u'type': u'article-journal',
- u'volume': u'614'}
+class URIValidator(plugin.Validator):
+    rx = "^([a-z0-9+.-]+):(?://(?:((?:[a-z0-9-._~!$&'()*+,;=:]|%[0-9A-F]{2})*)@)?((?:[a-z0-9-._~!$&'()*+,;=]|%[0-9A-F]{2})*)(?::(\d*))?(/(?:[a-z0-9-._~!$&'()*+,;=:@/]|%[0-9A-F]{2})*)?|(/?(?:[a-z0-9-._~!$&'()*+,;=:@]|%[0-9A-F]{2})+(?:[a-z0-9-._~!$&'()*+,;=:@/]|%[0-9A-F]{2})*)?)(?:\?((?:[a-z0-9-._~!$&'()*+,;=:/?@]|%[0-9A-F]{2})*))?(?:#((?:[a-z0-9-._~!$&'()*+,;=:/?@]|%[0-9A-F]{2})*))?$"
+
+    """
+    Taken from: http://snipplr.com/view/6889/regular-expressions-for-uri-validationparsing/
+    /*composed as follows:
+	    ^
+	    ([a-z0-9+.-]+):							#scheme
+	    (?:
+		    //							#it has an authority:
+		    (?:((?:[a-z0-9-._~!$&'()*+,;=:]|%[0-9A-F]{2})*)@)?	#userinfo
+		    ((?:[a-z0-9-._~!$&'()*+,;=]|%[0-9A-F]{2})*)		#host
+		    (?::(\d*))?						#port
+		    (/(?:[a-z0-9-._~!$&'()*+,;=:@/]|%[0-9A-F]{2})*)?	#path
+		    |
+									    #it doesn't have an authority:
+		    (/?(?:[a-z0-9-._~!$&'()*+,;=:@]|%[0-9A-F]{2})+(?:[a-z0-9-._~!$&'()*+,;=:@/]|%[0-9A-F]{2})*)?	#path
+	    )
+	    (?:
+		    \?((?:[a-z0-9-._~!$&'()*+,;=:/?@]|%[0-9A-F]{2})*)	#query string
+	    )?
+	    (?:
+		    #((?:[a-z0-9-._~!$&'()*+,;=:/?@]|%[0-9A-F]{2})*)	#fragment
+	    )?
+	    $
+    */
+    """
+
+    def supports(self, datatype, *args, **kwargs):
+        lower = datatype.lower()
+        return lower in ["uri", "url"]
+    
+    def validate(self, datatype, uri, *args, **kwargs):
+        r = plugin.ValidationResponse()
+        
+        # first do the format validation
+        kwargs["validation_response"] = r
+        self.validate_format(datatype, uri, *args, **kwargs)
+        
+        # then go and check the ACAT
+        return self.validate_realism(datatype, uri, *args, **kwargs)
+    
+    def validate_format(self, datatype, uri, *args, **kwargs):
+        r = kwargs.get("validation_response", plugin.ValidationResponse())
+        result = re.match(self.rx, uri)
+        if result is None:
+            r.error("URI does not match the form of a URI")
+        else:
+            r.info("URI meets the format criteria")
+        return r
+    
+    def validate_realism(self, datatype, uri, *args, **kwargs):
+        r = kwargs.get("validation_response", plugin.ValidationResponse())
+        
+        # if the uri is a url, we can try to dereference it
+        if uri.startswith("http"): # will cover https
+            try:
+                resp = requests.get(uri, timeout=3)
+            except requests.exceptions.Timeout:
+                r.warn("Attempted to verify HTTP URI, but request to server timed out")
+                return r
+            if resp.status_code >= 400 and resp.status_code < 500:
+                r.error("HTTP URI does not resolve to a valid resource")
+            if resp.status_code >= 500:
+                r.warn("HTTP URI resolved to a server which suffered an internal error on attempting to retrieve it - it's probably not your fault")
+            else:
+                r.info("HTTP URI was successfully resolved - although this doesn't guarantee that it points to the document you think it points to!")
+            
+        return r
+
+class PMID(plugin.Validator):
+    rx = "^[\d]{1,8}$"
+    nrx = "([\d]{1,8})"
+    
+    def supports(self, datatype, *args, **kwargs):
+        lower = datatype.lower()
+        return lower in ["pmid", "pubmed"]
+    
+    def validate(self, datatype, pmid, *args, **kwargs):
+        r = plugin.ValidationResponse()
+        
+        # first do the format validation
+        kwargs["validation_response"] = r
+        self.validate_format(datatype, pmid, *args, **kwargs)
+        
+        # then go and check Entrez
+        return self.validate_realism(datatype, pmid, *args, **kwargs)
+    
+    def validate_format(self, datatype, pmid, *args, **kwargs):
+        r = kwargs.get("validation_response", plugin.ValidationResponse())
+        
+        # first check for and strip any odd prefix
+        lp = pmid.lower()
+        if lp.startswith("pmc"):
+            lp = lp[3:]
+        if lp.startswith("pmid"):
+            lp = lp[4:]
+        if lp.startswith(":"):
+            lp = lp[1:]
+        
+        if lp != pmid.lower():
+            r.warn("Your PMID has a prefix; there is no standardisation on PMID expressions, so this is legal, but it might confuse some systems/users")
+            r.correction(lp)
+        
+        # now check the format of the main pmid
+        result = re.match(self.rx, lp)
+        if result is None:
+            r.error("PMID does not match the form of a PMID (should be a number of up to 8 digits)")
+        else:
+            r.info("PMID meets the format criteria")
+        
+        return r
+    
+    def validate_realism(self, datatype, pmid, *args, **kwargs):
+        r = kwargs.get("validation_response", plugin.ValidationResponse())
+        
+        result = re.search(self.nrx, pmid)
+        xml_url = "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=" + result.group(0) + "&retmode=xml"
+        
+        # now dereference it and find out the target of the (chain of) 303(s)
+        try:
+            response = requests.get(xml_url, timeout=3)
+        except requests.exceptions.Timeout:
+            r.warn("Attempted to verify PMID against Entrez, but request to server timed out")
+            return r
+        if response.status_code >= 400 and response.status_code < 500:
+            r.error("Could not locate this PMID in the Entrez authority database - it is very very likely to be wrong")
+            return r
+        if response.status_code >= 500:
+            r.warn("Entrez suffered a server error when attempting to retrieve this PMID - it's probably not your fault")
+            return r
+        
+        try:
+            xml = etree.fromstring(response.text.encode("utf-8"))
+            r.info("Successfully resolved this PMID to a record in the Entrez database")
+            r.data = EntrezWrapper(xml)
+            return r
+        except:
+            r.warn("XML retrieved from Entrez for this PMID could not be parsed")
+            return r
+
+class EntrezWrapper(plugin.DataWrapper):
+
+    type_map = {
+        "doi" : ["/PubmedArticleSet/PubmedArticle/PubmedData/ArticleIdList/ArticleId[@IdType='doi']"],
+        "issn" : ["/PubmedArticleSet/PubmedArticle/MedlineCitation/Article/Journal/ISSN", 
+                    "/PubmedArticleSet/PubmedArticle/MedlineCitation/MedlineJournalInfo/ISSNLinking"],
+        "issue" : ["/PubmedArticleSet/PubmedArticle/MedlineCitation/Article/Journal/JournalIssue/Issue"],
+        "published_date" : ["/PubmedArticleSet/PubmedArticle/MedlineCitation/Article/Journal/JournalIssue/PubDate"],
+        "journal_title" : ["/PubmedArticleSet/PubmedArticle/MedlineCitation/Article/Journal/Title", 
+                            "/PubmedArticleSet/PubmedArticle/MedlineCitation/Article/Journal/ISOAbbreviation"],
+        "title" : ["/PubmedArticleSet/PubmedArticle/MedlineCitation/Article/ArticleTitle"],
+        "start_page" : ["/PubmedArticleSet/PubmedArticle/MedlineCitation/Article/Pagination/MedlinePgn"],
+        "page_range" : ["/PubmedArticleSet/PubmedArticle/MedlineCitation/Article/Pagination/MedlinePgn"],
+        "pages" : ["/PubmedArticleSet/PubmedArticle/MedlineCitation/Article/Pagination/MedlinePgn"],
+        "page_count" : ["/PubmedArticleSet/PubmedArticle/MedlineCitation/Article/Pagination/MedlinePgn"],
+        "end_page" : ["/PubmedArticleSet/PubmedArticle/MedlineCitation/Article/Pagination/MedlinePgn"],
+        "author" : [], # placeholder - the example is not very good
+        "language" : ["/PubmedArticleSet/PubmedArticle/MedlineCitation/Article/Language"],
+        "iso-639-2" : ["/PubmedArticleSet/PubmedArticle/MedlineCitation/Article/Language"],
+        "publication_type" : ["/PubmedArticleSet/PubmedArticle/MedlineCitation/Article/PublicationTypeList/PublicationType"],
+        "abstract" : ["/PubmedArticleSet/PubmedArticle/MedlineCitation/OtherAbstract/AbstractText"],
+        "publication_identifier" : ["/PubmedArticleSet/PubmedArticle/PubmedData/ArticleIdList/ArticleId"],
+        "pmid" : ["/PubmedArticleSet/PubmedArticle/PubmedData/ArticleIdList/ArticleId[@IdType='pubmed']"],
+    }
+    
+    month_map = {
+        "Jan" : "01", "Feb" : "02", "Mar" : "03", "Apr" : "04", "May" : "05", "Jun" : "06",
+        "Jul" : "07", "Aug" : "08", "Sep" : "09", "Oct" : "10", "Nov" : "11", "Dec" : "12"
+    }
+
+    def __init__(self, xml):
+        self.xml = xml
+
+    def source_name(self):
+        return "entrez"
+
+    def get(self, datatype):
+        got = []
+        lower = datatype.lower()
+        
+        # special treatment for:
+        # published_date, start_page, page_range, pages, page_count, end_page
+        xps = self.type_map.get(lower, [])
+        for xp in xps:
+            if lower in ["published_date"]:
+                dates = self._getPublishedDate()
+                got += dates
+            elif lower in ["start_page", "page_range", "pages", "page_count", "end_page"]:
+                page = self._getPage(lower)
+                got += page
+            else:
+                els = self.xml.xpath(xp)
+                if els is None or len(els) == 0:
+                    continue
+                for e in els:
+                    text = e.text.strip()
+                    got.append(text)
+        
+        if len(got) == 0:
+            return None
+        return list(set(got))
+    
+    def _getPublishedDate(self):
+        dates = []
+        xps = self.type_map.get("published_date", [])
+        for xp in xps:
+            els = self.xml.xpath(xp)
+            if els is None or len(els) == 0:
+                continue
+            for e in els:
+                year = e.find("Year")
+                month = e.find("Month")
+                day = e.find("Day")
+                date = ""
+                if year is not None:
+                    date += year.text
+                    if month is not None:
+                        date += "-" + self.month_map.get(month.text, month.text)
+                        if day is not None:
+                            date += "-" + day.text
+                    dates.append(date)
+        return dates
+    
+    def _getPage(self, datatype):
+        pages = []
+        xps = self.type_map.get(datatype, [])
+        for xp in xps:
+            els = self.xml.xpath(xp)
+            for e in els:
+                if datatype in ["page_range", "pages"]:
+                    pages.append(e.text)
+                elif datatype == "start_page":
+                    bits = e.text.split("-")
+                    pages.append(bits[0])
+                elif datatype == "end_page":
+                    bits = e.text.split("-")
+                    if len(bits) == 2:
+                        pages.append(bits[1])
+                elif datatype == "page_count":
+                    bits = e.text.split("-")
+                    if len(bits) == 2:
+                        try:
+                            count = int(bits[1]) - int(bits[0])
+                            pages.append(count) 
+                        except:
+                            pass
+        return pages
+
 """
 
+xp = "/PubmedArticleSet/PubmedArticle/PubmedData/ArticleIdList/ArticleId[@IdType='doi']"
+
+<PubmedArticleSet>
+    <PubmedArticle>
+        <MedlineCitation Owner="PIP" Status="MEDLINE">
+            <PMID Version="1">12345678</PMID>
+            <DateCreated>
+                <Year>1995</Year>
+                <Month>01</Month>
+                <Day>04</Day>
+            </DateCreated>
+            <DateCompleted>
+                <Year>1995</Year>
+                <Month>01</Month>
+                <Day>04</Day>
+            </DateCompleted>
+            <DateRevised>
+                <Year>2002</Year>
+                <Month>10</Month>
+                <Day>04</Day>
+            </DateRevised>
+            <Article PubModel="Print">
+                <Journal>
+                    <ISSN IssnType="Print">0916-0582</ISSN>
+                    <JournalIssue CitedMedium="Print">
+                        <Issue>40</Issue>
+                        <PubDate>
+                            <Year>1994</Year>
+                            <Month>Jun</Month>
+                        </PubDate>
+                    </JournalIssue>
+                    <Title>Integration (Tokyo, Japan)</Title>
+                    <ISOAbbreviation>Integration</ISOAbbreviation>
+                </Journal>
+                <ArticleTitle>
+                    Denpasar Declaration on Population and Development.
+                </ArticleTitle>
+                <Pagination>
+                    <MedlinePgn>27-9</MedlinePgn>
+                </Pagination>
+                <AuthorList CompleteYN="Y">
+                    <Author ValidYN="Y">
+                        <CollectiveName>
+                            Ministerial Meeting on Population of the Non-Aligned Movement (1993: Bali)
+                        </CollectiveName>
+                    </Author>
+                </AuthorList>
+                <Language>eng</Language>
+                <PublicationTypeList>
+                    <PublicationType>Journal Article</PublicationType>
+                </PublicationTypeList>
+            </Article>
+            <MedlineJournalInfo>
+                <Country>JAPAN</Country>
+                <MedlineTA>Integration</MedlineTA>
+                <NlmUniqueID>9001944</NlmUniqueID>
+                <ISSNLinking>0916-0582</ISSNLinking>
+            </MedlineJournalInfo>
+            <CitationSubset>J</CitationSubset>
+            <MeshHeadingList>
+                <MeshHeading>
+                    <DescriptorName MajorTopicYN="Y">Developing Countries</DescriptorName>
+                </MeshHeading>
+                <MeshHeading>
+                    <DescriptorName MajorTopicYN="Y">Economics</DescriptorName>
+                </MeshHeading>
+                <MeshHeading>
+                    <DescriptorName MajorTopicYN="Y">International Cooperation</DescriptorName>
+                </MeshHeading>
+                <MeshHeading>
+                    <DescriptorName MajorTopicYN="Y">Public Policy</DescriptorName>
+                </MeshHeading>
+            </MeshHeadingList>
+            <OtherID Source="PIP">099526</OtherID>
+            <OtherID Source="POP">00232894</OtherID>
+            <OtherAbstract Language="eng" Type="PIP">
+                <AbstractText>
+                Ministers from the countries of the Non-Aligned Movement (NAM) got together at the Ministerial Meeting on Population in Bali, Indonesia, November 11-13, 1993, to develop the Denpasar Declaration on Population and Development. The declaration was made with full consideration and acceptance of the sovereignty of individual nations and the decisions on population of the heads of states and governments at the tenth conference of Non-Aligned Countries at Jakarta, 1992, and the results of the meeting of the Standing Ministerial Committee for Economic Cooperation of the NAM in Bali 1993. The ministers recognize that population should be an integral part of the development process, population policies and development efforts should be designed to improve the quality of life for present generations without compromising the ability of future generations to meet their own needs, and the alleviation of poverty is essential to the dignity of humankind and fundamental to the achievement of sustainable development. They further reaffirm the existence of humans as the center of concern for sustainable development, the right to an adequate standard of living for all, gender equality, greater multilateral cooperation for development, and that all developing countries should participate effectively at the International Conference on Population and Development to be convened in Cairo in 1994. The text of the declaration is included.
+                </AbstractText>
+            </OtherAbstract>
+            <KeywordList Owner="PIP">
+                <Keyword MajorTopicYN="Y">Developing Countries</Keyword>
+                <Keyword MajorTopicYN="Y">Development Policy</Keyword>
+                <Keyword MajorTopicYN="Y">Economic Development</Keyword>
+                <Keyword MajorTopicYN="N">Economic Factors</Keyword>
+                <Keyword MajorTopicYN="Y">International Cooperation</Keyword>
+                <Keyword MajorTopicYN="N">Policy</Keyword>
+                <Keyword MajorTopicYN="Y">Population Policy</Keyword>
+                <Keyword MajorTopicYN="N">Social Policy</Keyword>
+            </KeywordList>
+            <GeneralNote Owner="PIP">TJ: INTEGRATION</GeneralNote>
+        </MedlineCitation>
+        <PubmedData>
+            <History>
+                <PubMedPubDate PubStatus="pubmed">
+                    <Year>1994</Year>
+                    <Month>6</Month>
+                    <Day>1</Day>
+                    <Hour>0</Hour>
+                    <Minute>0</Minute>
+                </PubMedPubDate>
+                <PubMedPubDate PubStatus="medline">
+                    <Year>2002</Year>
+                    <Month>10</Month>
+                    <Day>9</Day>
+                    <Hour>4</Hour>
+                    <Minute>0</Minute>
+                </PubMedPubDate>
+                <PubMedPubDate PubStatus="entrez">
+                    <Year>1994</Year>
+                    <Month>6</Month>
+                    <Day>1</Day>
+                    <Hour>0</Hour>
+                    <Minute>0</Minute>
+                </PubMedPubDate>
+            </History>
+            <PublicationStatus>ppublish</PublicationStatus>
+            <ArticleIdList>
+                <ArticleId IdType="pubmed">12345678</ArticleId>
+            </ArticleIdList>
+        </PubmedData>
+    </PubmedArticle>
+</PubmedArticleSet>
+
+"""
+
+class LanguageComparison(plugin.Comparator):
+    def supports(self, datatype, **comparison_options):
+        lower = datatype.lower()
+        return lower in ["language", "iso-639-1", "iso-639-2"]
+        
+    def compare(self, datatype, original, comparison, **comparison_options):
+        r = plugin.ComparisonResponse()
+        
+        # whatever they are, if they are the same they are the same
+        if original == comparison:
+            r.success = True
+            return r
+        
+        # if they are not equivalent, get them into iso-639-2 (the superset)
+        # and compare them
+        orig6392 = original
+        if original in ISO6391.codes:
+            orig6392 = ISO6391.codes.get(original).get("iso6392")
+        elif original in Language.langs:
+            orig6392 = Language.langs.get(original).get("iso6392")
+        
+        comp6392 = comparison
+        if comparison in ISO6391.codes:
+            comp6392 = ISO6391.codes.get(comparison).get("iso6392")
+        elif comparison in Language.langs:
+            comp6392 = Language.langs.get(comparison).get("iso6392")
+        
+        r.success = orig6392 == comp6392
+        return r
+    
 class ISO6391(plugin.Validator):
 
     codes = {

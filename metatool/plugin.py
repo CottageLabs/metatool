@@ -1,5 +1,7 @@
 import imp, os, json
 import config
+from copy import deepcopy
+
 
 MODULE_EXTENSIONS = ('.py',) # only interested in .py files, not pyc or pyo
 
@@ -69,7 +71,7 @@ class ValidationResponse(object):
     def alternative(self, alt):
         self._alternative.append(alt)
     
-    def json(self, indent=None):
+    def as_dict(self):
         desc = {
             "provenance" : self.provenance,
             "info" : self._info,
@@ -78,6 +80,10 @@ class ValidationResponse(object):
             "correction" :  self._correction,
             "alternative" : self._alternative
         }
+        return desc
+    
+    def json(self, indent=None):
+        desc = self.as_dict()
         if indent is None:
             return json.dumps(desc)
         else:
@@ -114,7 +120,7 @@ class ComparisonResponse(object):
     def get_corrections(self):
         return self._correction
     
-    def json(self, indent=None):
+    def as_dict(self):
         desc = {
             "success" : self.success,
             "comparator" : self.comparator,
@@ -122,6 +128,10 @@ class ComparisonResponse(object):
             "data_source" : self.data_source,
             "compared_with" :  self.compared_with
         }
+        return desc
+    
+    def json(self, indent=None):
+        desc = self.as_dict()
         if indent is None:
             return json.dumps(desc)
         else:
@@ -213,6 +223,27 @@ class FieldSet(object):
                 "comparison" : {},
                 "additional" : {}
             }
+    
+    def as_dict(self):
+        j = deepcopy(self.fieldset)
+        for field_name in j.keys():
+            cvalues = j.get(field_name, {}).get("comparison", {}).keys()
+            for v in cvalues:
+                resps = j.get(field_name, {}).get("comparison", {}).get(v, [])
+                rjs = []
+                for r in resps:
+                    rj = r.as_dict()
+                    rjs.append(rj)
+                j[field_name]["comparison"][v] = rjs
+            vvalues = j.get(field_name, {}).get("validation", {}).keys()
+            for v in vvalues:
+                resps = j.get(field_name, {}).get("validation", {}).get(v, [])
+                rjs = []
+                for r in resps:
+                    rj = r.as_dict()
+                    rjs.append(rj)
+                j[field_name]["validation"][v] = rjs
+        return j
 
 def load_validators():
     return _load(Validator)

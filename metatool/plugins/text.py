@@ -28,6 +28,10 @@ class TitleAbstract(plugin.Validator):
         elif len(value) <= 10 and datatype in ["description", "abstract"]:
             r.warn("Description/Abstract is very short - it may not be the actual description/abstract, or may be inadequate")
         
+        if r.has_warnings():
+            return r
+        
+        r.info("Field value is long enough to be suitably likely to be a title or abstract")
         return r
 
 class Equivalent(plugin.Comparator):

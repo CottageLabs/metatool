@@ -3,7 +3,39 @@ try:
 except ImportError:
     import plugin as plugin
 
-from dateutil import parser
+class IntegerValidator(plugin.Validator):
+    def supports(self, datatype, *args, **kwargs):
+        lower = datatype.lower()
+        return lower in ["integer"]
+    
+    def validate(self, datatype, number, *args, **kwargs):
+        r = plugin.ValidationResponse()
+        
+        # first do the format validation
+        kwargs["validation_response"] = r
+        return self.validate_format(datatype, number, *args, **kwargs)
+    
+    def validate_format(self, datatype, number, *args, **kwargs):
+        r = kwargs.get("validation_response", plugin.ValidationResponse())
+        
+        # inputs might be string representations of ints, or ints
+        if not isinstance(number, int) and not isinstance(number, str):
+            r.error("Field content is not an integer")
+            return r
+        
+        # convert any strings to ints
+        try:
+            number = int(number)
+        except:
+            r.error("Field content is not an integer")
+            return r
+        
+        r.info("Field content is an integer")
+        return r
+    
+    def validate_realism(self, datatype, doi, *args, **kwargs):
+        r = kwargs.get("validation_response", plugin.ValidationResponse())
+        return r
 
 class IntegersEqual(plugin.Comparator):
     def supports(self, datatype, **comparison_options):
@@ -32,72 +64,6 @@ class IntegersEqual(plugin.Comparator):
         
         # equivalent things have to be equivalent!
         r.success = original == comparison
-        return r
-
-class DatesSimilar(plugin.Comparator):
-    def supports(self, datatype, **comparison_options):
-        return False
-    
-    def compare(self, datatype, original, comparison, **comparison_options):
-        r = plugin.ComparisonResponse()
-        
-        ods = []
-        try:
-            od1 = parser.parse(original, dayfirst=True, yearfirst=True)
-            ods.append(od1)
-        except:
-            pass
-        
-        try:
-            od2 = parser.parse(original, dayfirst=True, yearfirst=False)
-            ods.append(od2)
-        except:
-            pass
-        
-        try:
-            od3 = parser.parse(original, dayfirst=False, yearfirst=True)
-            ods.append(od3)
-        except:
-            pass
-        
-        try:
-            od4 = parser.parse(original, dayfirst=False, yearfirst=False)
-            ods.append(od4)
-        except:
-            pass
-        
-        cds = []
-        try:
-            cd1 = parser.parse(comparison, dayfirst=True, yearfirst=True)
-            cds.append(cd1)
-        except:
-            pass
-        
-        try:
-            cd2 = parser.parse(comparison, dayfirst=True, yearfirst=False)
-            cds.append(cd2)
-        except:
-            pass
-            
-        try:
-            cd3 = parser.parse(comparison, dayfirst=False, yearfirst=True)
-            cds.append(cd3)
-        except:
-            pass
-            
-        try:
-            cd4 = parser.parse(comparison, dayfirst=False, yearfirst=False)
-            cds.append(cd4)
-        except:
-            pass
-        
-        for od in ods:
-            for cd in cds:
-                if od == cd:
-                    r.success = True
-                    return r
-        
-        r.sucess = False
         return r
 
 

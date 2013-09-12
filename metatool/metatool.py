@@ -1,6 +1,7 @@
 import plugin as plugin
 from copy import deepcopy
 import config
+import json
 
 validators = plugin.load_validators()
 comparators = plugin.load_comparators()
@@ -116,7 +117,15 @@ def fieldset_to_html(fieldset):
     for entry in entries:
         tables.append(_result_entry_to_table(entry))
     
-    return "\n\n".join(tables)
+    frag = _raw_fieldset_html(fieldset)
+    
+    return "\n\n".join(tables) + "\n\n" + frag
+
+def _raw_fieldset_html(fieldset):
+    j = fieldset.as_dict()
+    out = json.dumps(j, indent=2)
+    frag = "<pre>" + out + "</pre>"
+    return frag
 
 def _result_entry_to_table(entry):
     frag = "<table border='1'>"
@@ -144,8 +153,10 @@ def _result_entry_to_table(entry):
         cr_frag = "<p class='successful_crossref_fail'>Field was cross-referenced against external sources, but could not be validated.</p>"
     else:
         cr_frag = "<p class='successful_crossref_title'>Successfully cross-referenced with</p>"
-        for cw, prov in success[1]:
-            cr_frag += "<p class='successful_crossref_entries'><span class='successful_crossref_entry'>" + cw + "</span><span class='successful_crossref_prov'> - " + prov + "</span></p>"
+        cr_frag += "<ul class='successful_crossref_entries'>"
+        for cw, prov, comparator in success[1]:
+            cr_frag += "<li><span class='successful_crossref_entry'>" + cw + "</span><span class='successful_crossref_comparator'> - " + comparator + "</span><span class='successful_crossref_prov'> - via " + prov + "</span></li>"
+        cr_frag += "</ul>"
     
     frag += "<tr>"
     frag += "<td colspan='2' class='overall_success " + success[0] + "'>" + success_message + "</td>"
@@ -259,7 +270,7 @@ def _fieldset_to_result_entries(fieldset):
             crossrefs = []
             if comparisons is not None:
                 for co in comparisons:
-                    crossrefs.append((co.compared_with, co.data_source))
+                    crossrefs.append((co.compared_with, co.data_source, co.comparator))
             else:
                 crossrefs = False
             
