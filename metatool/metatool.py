@@ -49,8 +49,9 @@ def validate_fieldset(fieldset, **validation_options):
         for cr in crossref_data:
             compare = cr.get(crossref)
             if compare is None or len(compare) == 0:
+                print "no", crossref, "to compare with"
                 continue
-            print "comparing with", compare
+            print "comparing", fieldset.values(field), "with", compare
             additional = _list_compare(field_comparison_register, crossref, fieldset.values(field), compare, comparator_plugins, cr, **validation_options)
             for a in additional:
                 _append(additionals, a, cr.source_name())

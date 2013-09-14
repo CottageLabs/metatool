@@ -627,6 +627,7 @@ class EntrezWrapper(plugin.DataWrapper):
                 got += page
             else:
                 els = self.xml.xpath(xp)
+                print xp, els
                 if els is None or len(els) == 0:
                     continue
                 for e in els:
