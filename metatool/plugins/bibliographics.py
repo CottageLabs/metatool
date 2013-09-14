@@ -141,8 +141,8 @@ class JournalName(plugin.Validator):
         return r
 
 class ISBN(plugin.Validator):
-    rx_10 = "\d{9}[0-9X]"
-    rx_13 = "\d{12}[0-9X]"
+    rx_10 = "^\d{9}[0-9X]$"
+    rx_13 = "^\d{12}[0-9X]$"
 
     def supports(self, datatype, *args, **kwargs):
         lower = datatype.lower()
@@ -161,6 +161,7 @@ class ISBN(plugin.Validator):
     
         # try to normalise out some of the isbn prefixes        
         norm = isbn.replace(" ", "").replace("-", "").lower()
+        print norm
         if norm.startswith("isbn"):
             norm = norm[len("isbn"):]
         
@@ -182,11 +183,17 @@ class ISBN(plugin.Validator):
             checksum = self._checksum13(norm)
             
         if checksum != norm[-1]:
-            r.error("isbn checksum does not match calculated checksum")
+            r.error("isbn checksum does not match calculated checksum (" + str(checksum) + ")")
+        else:
+            if m10 is not None:
+                r.info("ISBN is a legal 10-digit ISBN")
+            elif m13 is not None:
+                r.info("ISBN is a legal 13-digit ISBN")
         return r
     
     def _checksum10(self, isbn10):
-        remainder = sum((10 - i) * (int(x)) for i, x in enumerate(isbn10) if i < 9) % 11
+        remainder = 11 - (sum([int(n) * (10 - idx) for idx, n in enumerate(isbn10) if idx < 9]) % 11)
+        print "CHECKSUM 10", remainder
         
         if remainder == 0:
             return "0"
@@ -196,7 +203,8 @@ class ISBN(plugin.Validator):
         return str(check)
         
     def _checksum13(self, isbn13):
-        remainder = (10 - (sum(int(digit) * (3 if idx % 2 else 1) for idx, digit in enumerate(isbn13[:12])) % 10)) % 10
+        remainder = 10 - (sum([int(n) * (1 if idx % 2 == 0 else 3) for idx, n in enumerate(isbn13) if idx < 12]) % 10)
+        print "CHECKSUM 13", remainder
         return str(remainder)
 
 
@@ -811,6 +819,87 @@ xp = "/PubmedArticleSet/PubmedArticle/PubmedData/ArticleIdList/ArticleId[@IdType
 </PubmedArticleSet>
 
 """
+
+class HandleValidator(plugin.Validator):
+    rx = "^((http:\/\/){0,1}hdl.handle.net\/|hdl:){0,1}(\d+[\\.]{0,1}.*\/.+)"
+    
+    def supports(self, datatype, *args, **kwargs):
+        lower = datatype.lower()
+        return lower in ["handle", "hdl"]
+    
+    def validate(self, datatype, handle, *args, **kwargs):
+        r = plugin.ValidationResponse()
+        
+        # first do the format validation
+        kwargs["validation_response"] = r
+        self.validate_format(datatype, handle, *args, **kwargs)
+        
+        # then go and check the handle server
+        return self.validate_realism(datatype, handle, *args, **kwargs)
+    
+    def validate_format(self, datatype, handle, *args, **kwargs):
+        r = kwargs.get("validation_response", plugin.ValidationResponse())
+        result = re.match(self.rx, handle)
+        if result is None:
+            r.error("Handle does not match the form of a Handle")
+        else:
+            r.info("Handle meets the format criteria")
+        
+        if not handle.startswith("http://hdl.handle.net") and not handle.startswith("hdl:") and not handle.startswith("hdl.handle.net"):
+            r.warn("Your handle does not start with a prefix, which may make it ambiguous in some contexts")
+            r.correction("http://hdl.handle.net/" + result.group(3))
+        
+        if handle.startswith("hdl.handle.net"):
+            r.warn("Your handle does not start with the http protocol prefix")
+            r.correction("http://" + handle)
+        
+        return r
+    
+    def validate_realism(self, datatype, handle, *args, **kwargs):
+        r = kwargs.get("validation_response", plugin.ValidationResponse())
+        
+        # make the handle into something we can de-reference at dx.doi.org
+        result = re.match(self.rx, handle)
+        if result is None:
+            # no need for a message, format check picks this up
+            return
+        
+        # create the canonical version
+        deref = "http://hdl.handle.net/" + result.group(3)
+        
+        # make a request to the handle server, to see if there is a record
+        # and if there is one, get back a json version of the data in this csl format
+        try:
+            resp = requests.get(deref, timeout=3)
+        except requests.exceptions.Timeout:
+            r.warn("Attempted to verify Handle against handle.net, but request to server timed out")
+            return r
+                
+        if resp.status_code >= 400 and resp.status_code < 500:
+            r.error("Unable to locate Handle in the handle.net redirect service, so even if this Handle is real, it is broken")
+        elif resp.status_code >= 500:
+            r.warn("handle.net redirect threw a server error on retrieving this Handle - it's probably not your fault")
+        else:
+            r.info("handle.net successfully responded to this Handle")
+            r.data = HandleRecord(resp.url)
+        
+        return r
+
+class HandleRecord(plugin.DataWrapper):
+    def __init__(self, url):
+        self.url = url
+
+    def source_name(self):
+        return "handle"
+
+    def get(self, datatype):
+        got = []
+        lower = datatype.lower()
+        
+        if datatype in ["publication_identifier", "url", "uri"]:
+            return [self.url]
+        else:
+            return None
 
 class LanguageComparison(plugin.Comparator):
     def supports(self, datatype, **comparison_options):
