@@ -245,6 +245,13 @@ class FieldSet(object):
                 j[field_name]["validation"][v] = rjs
         return j
 
+class NodeMaker(object):
+    def supports(self):
+        raise NotImplementedError
+    
+    def get_nodes(self, modeltype, model_stream, **nodemaker_options):
+        raise NotImplementedError
+
 def load_validators():
     return _load(Validator)
 
@@ -253,6 +260,9 @@ def load_comparators():
 
 def load_generators():
     return _load(Generator)
+    
+def load_nodemakers():
+    return _load(NodeMaker)
 
 def _load(klazz):
     # load the plugins from the plugin directory

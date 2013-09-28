@@ -1,0 +1,160 @@
+<CERIF xmlns="urn:xmlns:org:eurocris:cerif-1.6-2" xsi:schemaLocation="urn:xmlns:org:eurocris:cerif-1.6-2 http://www.eurocris.org/Uploads/Web%20pages/CERIF-1.6/CERIF_1.6_2.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" date="2013-07-31" sourceDatabase="REF entirely">
+
+<!-- based on the google spreadsheet: https://docs.google.com/spreadsheet/ccc?key=0AsW3CmDjW93kdElXS21oU2czeWYyNzJjQmdiaTV2R1E#gid=3 -->
+<cfResPubl>
+	<cfResPublId>internal-ukriss-id-012345678</cfResPublId>
+	<cfResPublDate>2013-07-01</cfResPublDate>
+	<!-- cfResPublSubmissionDate / -->
+	<!-- propose for CERIF extension - submission or depositing date as an attribute - from which the publication date can be derived when knowing the embargo period -->
+	<cfVol>-</cfVol>
+	<cfEdition>-</cfEdition>
+	<cfIssue>-</cfIssue>
+	<cfStartPage>185</cfStartPage>
+	<cfEndPage>194</cfEndPage>
+	<cfTotalPages>15</cfTotalPages>
+	<cfURI>http://eprints.rclis.org/17176/</cfURI>	
+	<cfTitle cfLangCode="en" cfTrans="o">Entities and Identities in Research Information Systems</cfTitle>
+	<cfKeyw cfLangCode="en" cfTrans="o">Identifiers; Profiles; Time</cfKeyw>
+	<cfAbstr cfLangCode="en" cfTrans="o">Where science is increasingly becoming a global business and furthermore with open data and access initiatives, means to identify and thus to connect system-internal with non-internal entities are urgently needed. The need for identifiers beyond systems is thus a global requirement but also relevant within organization boundaries spanning multiple systems. Various identifier initiatives and systems have started in the scientific domain and beyond. However, they have not yet achieved the required interoperability. With this paper we aim to collect additional essential ingredients towards designing a sustainable CERIF identifier sub model, contributing to ongoing discussions and supporting design decisions. Here, we first present common issues with identifiers in the wider academic domain, before we analyze available systems, technologies and current initiatives solving the global identity gap.</cfAbstr>	
+	<!-- The language of the entire published record -->
+	<cfResPubl_Class>
+		<cfClassId>en</cfClassId>
+		<cfClassSchemeId>iso:639-1</cfClassSchemeId>
+	</cfResPubl_Class> 
+	<!-- Every output or outcome needs a reference to the grant. -->
+	<cfProj_ResPubl>
+		<cfProjId>grant-id</cfProjId>
+		<cfClassId>grant-uuid</cfClassId>
+		<cfClassSchemeId>ukriss:grant-reference-scheme-uuid</cfClassSchemeId>
+	</cfProj_ResPubl>
+	<!-- From the cfResPubl_Class.cfClassId one may derive mappings to e.g. ROS Journal Article Title -->
+	<cfResPubl_Class>
+		<cfClassId>6months</cfClassId>
+		<cfClassSchemeId>rcuk:oa-policy-embargo-periods-scheme-uuid</cfClassSchemeId>
+	</cfResPubl_Class>
+	<cfResPubl_Class>
+		<cfClassId>journal-article-uuid</cfClassId>
+		<cfClassSchemeId>cerif:output-types-scheme-uuid</cfClassSchemeId>
+	</cfResPubl_Class>
+	<cfResPubl_Class>
+		<cfClassId>peer-reviewed-uuid</cfClassId>
+		<cfClassSchemeId>given:peer-reviewed-stages-scheme-uuid</cfClassSchemeId>
+	</cfResPubl_Class>	
+	<cfResPubl_Class>
+		<cfClassId>pre-print-uuid</cfClassId>
+		<cfClassSchemeId>given-or-derived?:pre-print-or-post-print-stages-scheme-uuid</cfClassSchemeId>
+	</cfResPubl_Class>		
+	<cfResPubl_Class>
+		<cfClassId>academic-authors-uuid</cfClassId>
+		<cfClassSchemeId>ukriss-derived:academic-authors-info-scheme-uuid</cfClassSchemeId>
+	</cfResPubl_Class>	
+	<cfResPubl_Class>
+		<cfClassId>international-authors-uuid</cfClassId>
+		<cfClassSchemeId>ukriss-derived:authors-country-info-scheme-uuid</cfClassSchemeId>
+	</cfResPubl_Class>
+	<cfResPubl_Class>
+		<cfClassId>target-audience-type-uuid</cfClassId>
+		<cfClassSchemeId>ros-given:audience-types-scheme-uuid</cfClassSchemeId>
+	</cfResPubl_Class>	
+	<cfFedId>
+		<cfFedId>10760/17176</cfFedId>
+		<cfFedId_Class>
+			<cfClassId>handle-uuid</cfClassId>
+			<cfClassSchemeId>ukriss:identifier-types-scheme-uuid</cfClassSchemeId>
+		</cfFedId_Class>
+	</cfFedId>
+	<cfFedId>
+		<cfFedId>978-3-12-732320-7</cfFedId>
+		<cfFedId_Class>
+			<cfClassId>isbn-uuid</cfClassId>
+			<cfClassSchemeId>ukriss:identifier-types-scheme-uuid</cfClassSchemeId>
+		</cfFedId_Class>
+	</cfFedId>
+	<cfFedId>
+		<cfFedId>03017-8471</cfFedId>
+		<cfFedId_Class>
+			<cfClassId>issn-uuid</cfClassId>
+			<cfClassSchemeId>ukriss:identifier-types-scheme-uuid</cfClassSchemeId>
+		</cfFedId_Class>
+	</cfFedId>	
+	<cfFedId>
+		<cfFedId>PMC2600426</cfFedId>
+		<cfFedId_Class>
+			<cfClassId>pubmed-uuid</cfClassId>
+			<cfClassSchemeId>ukriss:identifier-types-scheme-uuid</cfClassSchemeId>
+		</cfFedId_Class>
+	</cfFedId>
+	<cfFedId>
+		<cfFedId>10.1016/S0550-3213(01)00405-9</cfFedId>
+		<cfFedId_Class>
+			<cfClassId>doi-uuid</cfClassId>
+			<cfClassSchemeId>ukriss:identifier-types-scheme-uuid</cfClassSchemeId>
+		</cfFedId_Class>
+	</cfFedId>	
+	<!-- Link to host publication -->
+	<cfResPubl_ResPubl>
+		<cfResPublId2>internal-publication-identifier</cfResPublId2>
+		<cfClassId>host-publication</cfClassId>
+		<cfClassSchemeId>ukriss:core-profile-references-scheme-uuid</cfClassSchemeId>
+	</cfResPubl_ResPubl>
+	<cfPers_ResPubl>
+		<!-- recommend ORCID ?--> 
+		<!-- use HESA Staff ID ? -->
+		<cfPersId>profile-internal-person-identifier</cfPersId>
+		<!-- Do we need the firstName and lastName here? -->
+		<cfClassId>author</cfClassId>
+		<cfClassSchemeId>cerif:person-output-contributions-scheme-uuid</cfClassSchemeId>
+	</cfPers_ResPubl>
+	<cfOrgUnit_ResPubl>
+		<cfOrgUnitId>publisher-identifier</cfOrgUnitId>
+		<cfClassId>publisher-uuid</cfClassId>
+		<cfClassSchemeId>cerif:organisation-output-contributions-scheme-uuid</cfClassSchemeId>
+	</cfOrgUnit_ResPubl>
+</cfResPubl>
+
+<!-- Vocabularies in CERIF Semantic layer Format -->
+<!-- cerif:organisation-output-contributions-scheme-uuid -->
+<!-- cerif:person-output-contributions-scheme-uuid -->
+<!-- ukriss:core-profile-references-scheme -->
+<!-- ukriss:identifier-types-scheme-uuid -->
+<!-- ukriss:grant-reference-scheme-uuid -->
+<!-- ukriss-given:peer-reviewed-stages-scheme-uuid -->
+<!-- ukriss-derived:academic-authors-info-scheme-uuid -->
+<!-- ukriss-derived:authors-country-info-scheme-uuid -->
+<!-- ros-given:audience-types-scheme-uuid -->
+<!-- given-or-derived?:pre-print-or-post-print-stages-scheme-uuid -->
+<!-- rcuk:oa-policy-embargo-periods-scheme-uuid -->
+<!-- iso:639-1 -->
+
+<!-- Classification Schemes for the UKRISS Output Types related Terms -->
+<cfClassScheme>
+	<cfClassSchemeId>cerif:organisation-output-contributions-scheme-uuid</cfClassSchemeId>
+	<cfName cfLangCode="en" cfTrans="o">Organisational Output Contributions Scheme</cfName>
+	<cfDescrSrc cfLangCode="en" cfTrans="o">This is a Scheme of selected output types as derived from the CERIF 1.5 Vocabulary </cfDescrSrc>
+	<cfDescr cfLangCode="de" cfTrans="o">Das ist ....</cfDescr>
+	<!-- applicable with cfResPubl_Class entity -->	
+	<cfClass>
+		<cfClassId>journal-article-uuid</cfClassId>
+		<cfTerm cfLangCode="en" cfTrans="o">Journal Article</cfTerm>
+	</cfClass>
+	<cfClass>
+		<cfClassId>book-uuid</cfClassId>
+		<cfTerm cfLangCode="en" cfTrans="o">Book</cfTerm>
+	</cfClass>
+	<cfClass>
+		<cfClassId>chapter-in-book-uuid</cfClassId>
+		<cfTerm cfLangCode="en" cfTrans="o">Chapter in Book</cfTerm>
+	</cfClass>
+	<cfClass>
+		<cfClassId>monograph-uuid</cfClassId>
+		<cfTerm cfLangCode="en" cfTrans="o">Monograph</cfTerm>
+	</cfClass>
+	<cfClass>
+		<cfClassId>journal-uuid</cfClassId>
+		<cfTerm cfLangCode="en" cfTrans="o">Journal</cfTerm>
+	</cfClass>	
+</cfClassScheme>
+
+</CERIF>
+
+<!-- Following are the Vocabularies -->

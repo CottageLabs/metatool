@@ -6,6 +6,12 @@
 
 <h1>metatool</h1>
 
+<h2>Example files you can use</h2>
+
+<a href="/static/ukriss_outputs.xml">ukriss_outputs.xml</a>
+
+<h2>Validate</h2>
+
 <form action="/validate" method="POST" enctype=multipart/form-data>
     <p>
     <strong>model format</strong>&nbsp;&nbsp;
@@ -17,6 +23,20 @@
     <p><strong>model file</strong>&nbsp;&nbsp;<input type="file" name="model"></p>
     
     <p><input type="submit" name="submit_model" value="Validate!"></p>
+</form>
+
+<h2>Visualise</h2>
+<form action="/visualise" method="POST" enctype=multipart/form-data>
+    <p>
+    <strong>model format</strong>&nbsp;&nbsp;
+    <select name="modeltype">
+        <option value="ukriss_outputs">ukriss_outputs</option>
+    </select>
+    </p>
+    
+    <p><strong>model file</strong>&nbsp;&nbsp;<input type="file" name="model"></p>
+    
+    <p><input type="submit" name="submit_model" value="Visualise!"></p>
 </form>
 
 </body>

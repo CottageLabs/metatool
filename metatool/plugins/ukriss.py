@@ -5,6 +5,94 @@ except ImportError:
 
 from lxml import etree
 
+class OutputsNodes(plugin.NodeMaker):
+    NS = "{urn:xmlns:org:eurocris:cerif-1.6-2}"
+    
+    def supports(self, modeltype, **nodemaker_options):
+        return modeltype == "ukriss_outputs"
+        
+    def get_nodes(self, modeltype, model_stream, **nodemaker_options):
+        tree = etree.parse(model_stream)
+        root = tree.getroot()
+        
+        nodetree = {"name" : "CERIF", "children" : []}
+        for child in root.getchildren():
+            if not isinstance(child.tag, str):
+                continue
+            
+            if not child.tag.startswith("{urn:xmlns:org:eurocris:cerif-1.6-2}"):
+                continue
+            
+            nodetree["children"].append(self._do_nodes(child))
+        
+        print nodetree
+        return nodetree
+    
+    def _do_nodes(self, node):
+        name = node.tag[36:]
+        rawname = name[2:] if name.startswith("cf") else name
+        nodetree = {"name" : name, "children" : []}
+        classes = []
+        relations = []
+        properties = []
+        
+        for child in node.getchildren():
+            if not isinstance(child.tag, str):
+                continue
+            
+            if not child.tag.startswith("{urn:xmlns:org:eurocris:cerif-1.6-2}"):
+                continue
+
+            if self._is_class(rawname, child):
+                classes.append(self._do_class(child))
+            elif self._is_rel(rawname, child):
+                relations.append(self._do_relations(child))
+            else:
+                properties.append(self._do_properties(child))
+        
+        if len(classes) > 0:
+            nodetree["children"].append({"name" : "CLASSES", "children" : classes})
+        if len(relations) > 0:
+            nodetree["children"].append({"name" : "RELATIONS", "children" : relations})
+        if len(properties) > 0:
+            nodetree["children"].append({"name" : "PROPERTIES", "children" : properties})
+            
+        return nodetree
+    
+    def _do_class(self, node):
+        class_id = node.find(self.NS + "cfClassId")
+        class_scheme = node.find(self.NS + "cfClassSchemeId")
+        return {"name" : "Scheme: " + class_scheme.text + ", ID: " + class_id.text}
+    
+    def _do_relations(self, node):
+        obj = self._do_class(node)
+        for child in node:
+            if not isinstance(child.tag, str):
+                continue
+            
+            if not child.tag.startswith("{urn:xmlns:org:eurocris:cerif-1.6-2}"):
+                continue
+                
+            if (not child.tag.endswith("cfClassId") and 
+                    not child.tag.endswith("cfClassSchemeId")):
+                return {"name" : child.tag[36:] + ": " + obj.get("name", "")}
+        return {}
+                
+    def _do_properties(self, node):
+        if len(node.getchildren()) > 0:
+            return self._do_nodes(node)
+        return {"name" : node.tag[36:] + ": " + node.text} # FIXME: need to deal with attributes somewhere
+    
+    def _is_class(self, rawname, child):
+        return child.tag.endswith("cf" + rawname + "_Class")
+    
+    def _is_rel(self, rawname, child):
+        p1 = "cf" + rawname + "_"
+        p2 = "_" + rawname
+        return p1 in child.tag or p2 in child.tag
+    
+    
+
 class OutputsModel(plugin.Generator):
     NS = "{urn:xmlns:org:eurocris:cerif-1.6-2}"
 
