@@ -1,43 +1,78 @@
 <html>
 
-<head><title>metatool</title></head>
+<head>
+    <title>metatool</title>
+    <!-- get bootstrap js and css -->
+    <link rel="stylesheet" href="/static/bootstrap/css/bootstrap.min.css">
+    <script type="text/javascript" src="/static/bootstrap/js/bootstrap.min.js"></script>    
+</head>
 
 <body>
 
+<div class="hero-unit">
 <h1>metatool</h1>
+<h2>making metadata better data</h2>
+</div>
 
-<h2>Example files you can use</h2>
+<div class="row-fluid">
+    <div class="span1">&nbsp;</div>
+    <div class="span5">
+        <h2>Validate</h2>
 
-<a href="/static/ukriss_outputs.xml">ukriss_outputs.xml</a>
+        <form action="/validate" method="POST" enctype=multipart/form-data>
+            <p>
+            <strong>model format</strong>&nbsp;&nbsp;
+            <select name="modeltype">
+                <option value="ukriss_outputs">ukriss_outputs</option>
+            </select>
+            </p>
+            
+            <p><strong>model file</strong>&nbsp;&nbsp;<input type="file" name="model"></p>
+            
+            <p><input type="submit" name="submit_model" value="Validate!"></p>
+            
+            <p><strong>or try one of these examples:</strong></p>
+            
+            <ul>
+                <li><a href="/validate?url={{baseurl}}/static/ukriss_outputs.xml&modeltype=ukriss_outputs">Publications Outputs</a>&nbsp;[<a href="/static/ukriss_outputs.xml">download source file</a>]</li>
+            </ul>
+        </form>
+    </div>
 
-<h2>Validate</h2>
+    <div class="span5">
+        <h2>Visualise</h2>
+        <form action="/visualise" method="POST" enctype=multipart/form-data>
+            <p>
+            <strong>model format</strong>&nbsp;&nbsp;
+            <select name="modeltype">
+                <option value="ukriss_outputs">ukriss_outputs</option>
+            </select>
+            </p>
+            
+            <p><strong>model file</strong>&nbsp;&nbsp;<input type="file" name="model"></p>
+            
+            <p><input type="submit" name="submit_model" value="Visualise!"></p>
+            
+            <p><strong>or try one of these examples:</strong></p>
+            
+            <ul>
+                <li><a href="/visualise?url={{baseurl}}/static/ukriss_outputs.xml&modeltype=ukriss_outputs">Publications Outputs</a>&nbsp;[<a href="/static/ukriss_outputs.xml">download source file</a>]</li>
+                
+                <li><a href="/visualise?url=http://www.eurocris.org/Uploads/Web%20pages/CERIF-1.6/REF_submissionInCERIFXML_CommonFields.xml&modeltype=ukriss_outputs">REF Submission Common Fields</a>&nbsp;[<a href="http://www.eurocris.org/Uploads/Web%20pages/CERIF-1.6/REF_submissionInCERIFXML_CommonFields.xml">download source file</a>]</li>
+                
+                <li><a href="/visualise?url=http://www.eurocris.org/Uploads/Web%20pages/CERIF-1.6/REF_submissionInCERIFXML_ResearchGroups.xml&modeltype=ukriss_outputs">Publications Outputs</a>&nbsp;[<a href="http://www.eurocris.org/Uploads/Web%20pages/CERIF-1.6/REF_submissionInCERIFXML_ResearchGroups.xml">REF Submission Research Groups</a>]</li>
+                
+                <li><a href="/visualise?url=http://www.eurocris.org/Uploads/Web%20pages/CERIF-1.6/REF_submissionInCERIFXML_Staff.xml&modeltype=ukriss_outputs">REF Submission Staff</a>&nbsp;[<a href="http://www.eurocris.org/Uploads/Web%20pages/CERIF-1.6/REF_submissionInCERIFXML_Staff.xml">download source file</a>]</li>
+                
+                <li><a href="/visualise?url=http://www.eurocris.org/Uploads/Web%20pages/CERIF-1.6/REF_submissionInCERIFXML_Outputs.xml&modeltype=ukriss_outputs">REF Submission Outputs</a>&nbsp;[<a href="http://www.eurocris.org/Uploads/Web%20pages/CERIF-1.6/REF_submissionInCERIFXML_Outputs.xml">download source file</a>]</li>
+                
+                <li><a href="/visualise?url=http://www.eurocris.org/Uploads/Web%20pages/CERIF-1.6/REF_submissionInCERIFXML_Impact_and_Contacts.xml&modeltype=ukriss_outputs">REF Submission Impact and Contacts</a>&nbsp;[<a href="http://www.eurocris.org/Uploads/Web%20pages/CERIF-1.6/REF_submissionInCERIFXML_Impact_and_Contacts.xml">download source file</a>]</li>
+            </ul>
+            
 
-<form action="/validate" method="POST" enctype=multipart/form-data>
-    <p>
-    <strong>model format</strong>&nbsp;&nbsp;
-    <select name="modeltype">
-        <option value="ukriss_outputs">ukriss_outputs</option>
-    </select>
-    </p>
-    
-    <p><strong>model file</strong>&nbsp;&nbsp;<input type="file" name="model"></p>
-    
-    <p><input type="submit" name="submit_model" value="Validate!"></p>
-</form>
-
-<h2>Visualise</h2>
-<form action="/visualise" method="POST" enctype=multipart/form-data>
-    <p>
-    <strong>model format</strong>&nbsp;&nbsp;
-    <select name="modeltype">
-        <option value="ukriss_outputs">ukriss_outputs</option>
-    </select>
-    </p>
-    
-    <p><strong>model file</strong>&nbsp;&nbsp;<input type="file" name="model"></p>
-    
-    <p><input type="submit" name="submit_model" value="Visualise!"></p>
-</form>
+        </form>
+    </div>
+</div>
 
 </body>
 

@@ -81,7 +81,7 @@ class OutputsNodes(plugin.NodeMaker):
     def _do_properties(self, node):
         if len(node.getchildren()) > 0:
             return self._do_nodes(node)
-        return {"name" : node.tag[36:] + ": " + node.text} # FIXME: need to deal with attributes somewhere
+        return {"name" : node.tag[36:] + ": " + str(node.text)} # FIXME: need to deal with attributes somewhere
     
     def _is_class(self, rawname, child):
         return child.tag.endswith("cf" + rawname + "_Class")
