@@ -54,5 +54,9 @@ def visualise():
     nodes = viz.get_nodes(mt, f)
     return render_template("viz.html", nodes=json.dumps(nodes), baseurl=config.BASE_URL)
 
+@app.route("/acat", methods=["GET"])
+def acat_facetview():
+    return render_template("acat_search.html", es_host=config.ES_HOST, es_index=config.ES_INDEX)
+
 if __name__ == "__main__":
     app.run(host='0.0.0.0', debug=True, port=5005)

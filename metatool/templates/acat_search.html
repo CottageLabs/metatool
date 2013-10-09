@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Search ACAT - The Academic Catalogue</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="description" content="ACAT">
+        <meta name="author" content="Emanuil Tolev">
+
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='bootstrap/css/bootstrap.min.css') }}">
+        <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
+        <!--[if lt IE 9]>
+        <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+        <![endif]-->
+    </head>
+
+    <body>
+        <div class="container-fluid">
+            <div class="content">
+                <div class="row-fluid">
+                    <div class="span12">
+                        <h2 style="text-align:center;">ACAT - The Academic Catalogue</h2>
+                        <div class="facet-view-simple"></div>
+                    </div>
+                </div>
+            </div>
+        </div> <!-- /container-fluid -->
+
+        <script src="{{ url_for('static', filename='jquery-1.7.1.min.js') }}"></script>
+        <script src="{{ url_for('static', filename='bootstrap/js/bootstrap.min.js') }}"></script>
+
+        <script type="text/javascript" src="{{ url_for('static', filename='facetview/jquery.facetview.js')}}"></script>
+        <script type="text/javascript" src="{{ url_for('static', filename='linkify/1.0-modified/jquery.linkify-1.0.js')}}"></script>
+
+        <script type="text/javascript">
+
+            jQuery(document).ready(function($) {
+
+                    $('.facet-view-simple').facetview({
+search_url: 'http://{{ es_host }}/{{ es_index }}/journal/_search?',
+search_index: 'elasticsearch',
+datatype: 'json',
+
+facets: [
+{'field': 'journal_title.exact', 'display': 'Journal Title'},
+{'field': 'journal_name.exact', 'display': 'Journal Name (should be Title, needs merging!)'},
+{'field': 'journal_abbreviation.exact', 'display': 'Journal Abbreviation'},
+{'field': 'publisher_name.exact', 'display': 'Publisher'},
+{'field': 'issn.exact', 'display': 'ISSN'},
+{'field': 'electronic_issn.exact', 'display': 'Electronic ISSN'},
+{'field': 'print_issn.exact', 'display': 'Print ISSN'}
+],
+
+    paging: {
+size: 10
+    },
+/*    result_display: [
+    [
+{
+    "pre": "<strong>",
+    "field": "journal_title",
+    "post": "</strong>"
+}
+],
+    [
+{
+    "pre": "<strong>Title</strong>: ",
+    "field": "title",
+}
+],
+    [
+{
+    "pre": "<u>Homepage</u>: ",
+    "field": "homepage",
+}
+],
+    [
+{
+    "pre": "<u>URL</u>: ",
+    "field": "url",
+}
+],
+    [
+{
+    "pre": "<u>Interested in</u>: ",
+    "field": "interested_in",
+}
+],
+    [
+{
+    "pre": "<u>Policies</u>: ",
+    "field": "policies",
+}
+],
+    [
+{
+    "pre": "<u>Tags</u>: ",
+    "field": "tags",
+}
+],
+    [
+{
+    "pre": "<u>Useful links</u>: ",
+    "field": "useful_links",
+}
+],
+    		[
+            {
+            "pre": "<strong>Username / ID</strong>: ",
+            "field": "id",
+            }
+            ],
+     		[
+{
+    "pre": "<u>Interests</u>: ",
+    "field": "interests",
+}
+],
+    [
+{
+    "pre": "<u>Country</u>: ",
+    "field": "country",
+}
+],
+    [
+{
+    "pre": "<u>Affiliation</u>: ",
+    "field": "organisation",
+    "post": ", "
+},
+{
+    "field": "department",
+    "post": ", "
+},
+{
+    "field": "research_group"
+}
+],
+    ]
+*/
+
+    });
+
+});
+</script>
+
+
+    </body>
+</html>
