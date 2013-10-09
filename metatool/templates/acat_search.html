@@ -43,7 +43,6 @@ datatype: 'json',
 
 facets: [
 {'field': 'journal_title.exact', 'display': 'Journal Title'},
-{'field': 'journal_name.exact', 'display': 'Journal Name (should be Title, needs merging!)'},
 {'field': 'journal_abbreviation.exact', 'display': 'Journal Abbreviation'},
 {'field': 'publisher_name.exact', 'display': 'Publisher'},
 {'field': 'issn.exact', 'display': 'ISSN'},
@@ -51,93 +50,48 @@ facets: [
 {'field': 'print_issn.exact', 'display': 'Print ISSN'}
 ],
 
-    paging: {
+paging: {
 size: 10
-    },
-/*    result_display: [
-    [
+},
+result_display: [
+[
 {
-    "pre": "<strong>",
+    "pre": "<strong>Journal Title</strong>: ",
     "field": "journal_title",
-    "post": "</strong>"
 }
 ],
     [
 {
-    "pre": "<strong>Title</strong>: ",
-    "field": "title",
+    "pre": "Journal Abbreviation: ",
+    "field": "journal_abbreviation",
 }
 ],
     [
 {
-    "pre": "<u>Homepage</u>: ",
-    "field": "homepage",
+    "pre": "<u>Publisher</u>: ",
+    "field": "publisher_name",
 }
 ],
     [
 {
-    "pre": "<u>URL</u>: ",
-    "field": "url",
+    "pre": "ISSN: ",
+    "field": "issn",
 }
 ],
     [
 {
-    "pre": "<u>Interested in</u>: ",
-    "field": "interested_in",
+    "pre": "Electronic ISSN: ",
+    "field": "electronic_issn",
 }
 ],
     [
 {
-    "pre": "<u>Policies</u>: ",
-    "field": "policies",
-}
-],
-    [
-{
-    "pre": "<u>Tags</u>: ",
-    "field": "tags",
-}
-],
-    [
-{
-    "pre": "<u>Useful links</u>: ",
-    "field": "useful_links",
-}
-],
-    		[
-            {
-            "pre": "<strong>Username / ID</strong>: ",
-            "field": "id",
-            }
-            ],
-     		[
-{
-    "pre": "<u>Interests</u>: ",
-    "field": "interests",
-}
-],
-    [
-{
-    "pre": "<u>Country</u>: ",
-    "field": "country",
-}
-],
-    [
-{
-    "pre": "<u>Affiliation</u>: ",
-    "field": "organisation",
-    "post": ", "
-},
-{
-    "field": "department",
-    "post": ", "
-},
-{
-    "field": "research_group"
+    "pre": "Print ISSN: ",
+    "field": "print_issn",
 }
 ],
     ]
-*/
+    
 
     });
 
