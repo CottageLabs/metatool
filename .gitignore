@@ -1,3 +1,4 @@
 *.pyc
 metatool.egg-info/
-*.swp # vim
+# vim
+*.swp
