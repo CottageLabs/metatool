@@ -1,2 +1,3 @@
 *.pyc
-gtr.egg-info/
+metatool.egg-info/
+*.swp # vim
