@@ -62,10 +62,13 @@ class OutputsNodes(plugin.NodeMaker):
     def _do_class(self, node):
         class_id = node.find(self.NS + "cfClassId")
         class_scheme = node.find(self.NS + "cfClassSchemeId")
-        return {"name" : "Scheme: " + class_scheme.text + ", ID: " + class_id.text}
+        return {"name" : class_scheme.text, "children" : [{"name" : class_id.text}]}
+        # return {"name" : "Scheme: " + class_scheme.text + ", ID: " + class_id.text}
     
     def _do_relations(self, node):
-        obj = self._do_class(node)
+        class_id = node.find(self.NS + "cfClassId")
+        class_scheme = node.find(self.NS + "cfClassSchemeId")
+        obj = {"name" : class_scheme.text + "/" + class_id.text, "children" : []}
         for child in node:
             if not isinstance(child.tag, str):
                 continue
@@ -75,13 +78,15 @@ class OutputsNodes(plugin.NodeMaker):
                 
             if (not child.tag.endswith("cfClassId") and 
                     not child.tag.endswith("cfClassSchemeId")):
-                return {"name" : child.tag[36:] + ": " + obj.get("name", "")}
-        return {}
+                obj["children"].append({"name" : child.tag[36:]})
+                # return {"name" : child.tag[36:] + ": " + obj.get("name", "")}
+        return obj
                 
     def _do_properties(self, node):
         if len(node.getchildren()) > 0:
             return self._do_nodes(node)
-        return {"name" : node.tag[36:] + ": " + str(node.text)} # FIXME: need to deal with attributes somewhere
+        return {"name" : node.tag[36:], "children" : [{"name" : str(node.text)}]}
+        # return {"name" : node.tag[36:] + ": " + str(node.text)} # FIXME: need to deal with attributes somewhere
     
     def _is_class(self, rawname, child):
         return child.tag.endswith("cf" + rawname + "_Class")

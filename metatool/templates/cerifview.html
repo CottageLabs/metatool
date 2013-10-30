@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+    <script type="text/javascript" src="/static/d3.min.js"></script>
+    <!-- <script type="text/javascript" src="/static/d3.layout.js"></script> -->
+    
+    <!-- get bootstrap js and css -->
+    <link rel="stylesheet" href="/static/bootstrap/css/bootstrap.min.css">
+    <script type="text/javascript" src="/static/bootstrap/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="/static/dagre.js"></script>
+    <script type="text/javascript" src="/static/dagre-d3-simple.js"></script>
+    
+    <style type="text/css">
+text {
+  font-weight: 300;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 30px;
+}
+
+rect {
+  fill: #fff;
+}
+
+.node > rect {
+  stroke-width: 3px;
+  stroke: #333;
+  fill: none;
+  opacity: 0.5;
+}
+
+.edge rect {
+  fill: #fff
+}
+
+.edge path {
+  fill: none;
+  stroke: #333;
+  stroke-width: 1.5px;
+}
+
+.has_children > .label > rect {
+    fill: #cccccc;
+}
+
+.cerif > .label > rect {
+    fill: #00ffd0;
+}
+
+.classes > .label > rect {
+    fill: #b997ff;
+}
+
+.properties > .label > rect {
+    fill: #ffae6a;
+}
+
+.relations > .label > rect {
+    fill: #96c2ff;
+}
+
+.has_children rect {
+    stroke: #000000;
+    stroke-width: 2;
+}
+
+.childless rect {
+    stroke-dasharray: 3;
+    stroke: #cccccc;
+}
+
+.isrelationship > path {
+    stroke-dasharray: 5;
+}
+
+.ischild > path{
+
+}
+
+    </style>
+    
+    </head>
+  <body>
+  
+  <div class="hero-unit">
+    <h1><a href="{{baseurl}}">metatool</a></h1>
+    <h2>making metadata better data</h2>
+  </div>
+  
+    <div id="attach">
+      <svg class="main-svg" id="svg-canvas"></svg>
+    </div>
+    
+    <script type="text/javascript">
+    
+{% autoescape false %}
+    var nodetree = JSON.parse('{{nodes}}')
+{% endautoescape %}
+    
+    function nodetree2nodesandedges(nodetree) {
+        var nodeData = []
+        var edgeData = []
+        var counter = 0
+        
+        recurseNodeTree(nodetree, nodeData, edgeData, counter)
+        
+        return { nodes : nodeData, edges : edgeData }
+    }
+    
+    function recurseNodeTree(nodetree, nodeData, edgeData, counter, incompleteEdge, nodeIsEdge) {
+        if (!nodetree.visibility) {
+            return counter
+        }
+        var root = nodetree["name"]
+        var children = nodetree.children
+        var id = nodetree.id
+        
+        var nodeclass = ""
+
+        if (children) {
+            nodeclass += root.toLowerCase()
+            nodeclass += " has_children"
+        }
+        else {
+            nodeclass += "childless"
+            if (root === "CERIF") {
+                nodeclass += " cerif"
+            }
+            else if (root === "CLASSES") {
+                nodeclass += " classes"
+            }
+            else if (root === "PROPERTIES") {
+                nodeclass += " properties"
+            }
+            else if (root === "RELATIONS") {
+                nodeclass += " relations"
+            }
+        }
+        
+        if (nodeIsEdge) {
+            if (incompleteEdge) {
+                incompleteEdge.label = root.substring(0, 100)
+                for (var key in children) {
+                    counter = recurseNodeTree(children[key], nodeData, edgeData, counter, incompleteEdge, false)
+                }
+            }
+        }
+        else {
+            var rootnode = {"id" : id, "label" : root.substring(0, 100), "nodeclass" : nodeclass}
+            nodeData.push(rootnode)
+            
+            if (incompleteEdge) {
+                incompleteEdge.id += id
+                incompleteEdge.target = rootnode
+                edgeData.push(incompleteEdge)
+            }
+            
+            for (var key in children) {
+                counter++
+                var nie = root === "CLASSES" || root === "RELATIONS"
+                var edgeclass = ""
+                if (nie) {
+                    edgeclass += "isrelationship"
+                }
+                else {
+                    edgeclass += "ischild"
+                }
+                var cedge = {"id" : id + "-", "label": undefined, "source" : rootnode, "target" : undefined, "edgeclass" : edgeclass}
+                
+                counter = recurseNodeTree(children[key], nodeData, edgeData, counter, cedge, nie)
+            }
+        }
+        
+        return counter
+    }
+    
+    function switchAll(tree, val) {
+        tree["visibility"] = val
+        if (tree.children) {
+            for (var child in tree.children) {
+                switchAll(tree.children[child], val)
+            }
+        }
+    }
+    
+    function switchChildren(tree, val, depth) {
+        if (depth <= 0) { return }
+        if (tree.children) {
+            for (var child in tree.children) {
+                tree.children[child]["visibility"] = val
+                switchChildren(tree.children[child], val, depth - 1)
+            }
+        }
+    }
+    
+    function toggleChildren(tree, depth) {
+        if (depth <= 0) { return }
+        if (tree.children) {
+            for (var child in tree.children) {
+                tree.children[child]["visibility"] = !tree.children[child]["visibility"]
+                toggleChildren(tree.children[child], depth - 1)
+            }
+        }
+    }
+    
+    function switchThis(tree, val) {
+        tree["visibility"] = val
+    }
+    
+    function assignIds(nodetree, from) {
+        nodetree["id"] = from
+        if (nodetree.children) {
+            for (var key in nodetree.children) {
+                from ++
+                var child = nodetree.children[key]
+                from = assignIds(child, from)
+            }
+        }
+        return from
+    }
+    
+    function findSubNode(nodetree, id) {
+        if (nodetree.id === id) {
+            return nodetree
+        }
+        
+        if (nodetree.children) {
+            for (var key in nodetree.children) {
+                var child = nodetree.children[key]
+                var subnode = findSubNode(child, id)
+                if (subnode) {
+                    return subnode
+                }
+            }
+        }
+        
+        return false
+    }
+    
+    /* just an example node and edge set
+    var nodeData = [
+        {"id" : "0", "label" : "One", "nodeclass" : "one"},
+        {"id" : "1", "label" : "Two", "nodeclass" : "two"},
+        {"id" : "2", "label" : "Three", "nodeclass" : "three"},
+        {"id" : "3", "label" : "Four", "nodeclass" : "four"},
+        {"id" : "4", "label" : "Five", "nodeclass" : "five"},
+        {"id" : "5", "label" : "Six", "nodeclass" : "six"}
+    ]
+    
+    var edgeData = [
+        {"id" : "0-1", "label" : "0-1", "source" : nodeData[0], "target" : nodeData[1]},
+        {"id" : "0-2", "label" : "0-2", "source" : nodeData[0], "target" : nodeData[2]},
+        {"id" : "1-3", "label" : "1-3", "source" : nodeData[1], "target" : nodeData[3]},
+        {"id" : "2-4", "label" : "2-4", "source" : nodeData[2], "target" : nodeData[4]},
+        {"id" : "2-5", "label" : "2-5", "source" : nodeData[2], "target" : nodeData[5]}
+    ]
+    */
+    
+    // prep the node tree
+    assignIds(nodetree, 0)
+    switchAll(nodetree, false)
+    
+    // toggle on some initial nodes
+    switchThis(nodetree, true)
+    switchChildren(nodetree, true, 2)
+    
+    function clickHandler(d) {
+        var subnode = findSubNode(nodetree, d.id)
+        if (subnode) {
+            var depth = 1
+            if (subnode["name"] === "CLASSES" || subnode["name"] === "RELATIONS") {
+                depth = 2
+            }
+            toggleChildren(subnode, depth)
+            doDiagram()
+        }
+    }
+    
+    function doDiagram() {
+        // generate the nodes and edges from the tree
+        var params = nodetree2nodesandedges(nodetree)
+        
+        // generate the diagram
+        
+        // generate the diagram
+        updateViz(params, ".main-svg")
+        // renderDagreObjsToD3(params, ".main-svg");
+        
+        d3.selectAll("g.has_children").on("click", clickHandler)
+    }
+    
+    // first time only, init the diagram
+    initViz(".main-svg")
+    
+    // now do it!
+    doDiagram()
+    
+    </script>
+    
+  </body>
+ 
+</html>

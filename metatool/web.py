@@ -39,6 +39,21 @@ def validate():
     html = metatool.fieldsets_to_html(fieldsets)
     return render_template("results.html", tables=html, baseurl=config.BASE_URL)
 
+@app.route("/cerifeye", methods=["POST", "GET"])
+def cerifeye():
+    mt = request.values.get("modeltype")
+    f = None
+    
+    if request.method == "POST":
+        f = request.files.get("model")
+    elif request.method == "GET":
+        url = request.values.get("url")
+        resp = requests.get(url)
+        f = StringIO(resp.text)
+    
+    nodes = viz.get_nodes(mt, f)
+    return render_template("cerifview.html", nodes=json.dumps(nodes), baseurl=config.BASE_URL)
+    
 @app.route("/visualise", methods=["POST", "GET"])
 def visualise():
     mt = request.values.get("modeltype")
