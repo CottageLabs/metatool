@@ -90,11 +90,7 @@ def _append(d, k, v):
         d[k] = [v]                
 
 def validate_model(modeltype, model_stream, **validation_options):
-    fieldsets = None
-    for name, genny in generators.iteritems():
-        if genny.supports(modeltype, **validation_options):
-            fieldsets = genny.generate(modeltype, model_stream, **validation_options)
-            break
+    fieldsets = _generate_fieldsets(modeltype, model_stream, **validation_options)
     
     for fieldset in fieldsets:
         validate_fieldset(fieldset, **validation_options)
@@ -121,6 +117,7 @@ def _generate_fieldsets(modeltype, model_stream, **validation_options):
     for name, genny in generators.iteritems():
         if genny.supports(modeltype, **validation_options):
             return genny.generate(modeltype, model_stream, **validation_options)
+
 
 def fieldsets_to_html(fieldsets):
     frag = ""
