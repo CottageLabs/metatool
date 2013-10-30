@@ -102,6 +102,26 @@ def validate_model(modeltype, model_stream, **validation_options):
     return fieldsets
 
 
+def model2dict(modeltype, model_stream, **validation_options):
+    fieldsets = _generate_fieldsets(modeltype, model_stream, **validation_options)
+    
+    result = {}
+    for fieldset in fieldsets:
+        for field in fieldset.fields():
+            for value in fieldset.values(field):
+                result[field] = value
+    return result 
+
+
+def model2json(modeltype, model_stream, indent=None, **validation_options):
+    return json.dumps(model2dict(modeltype, model_stream, **validation_options), indent=indent)
+
+
+def _generate_fieldsets(modeltype, model_stream, **validation_options):
+    for name, genny in generators.iteritems():
+        if genny.supports(modeltype, **validation_options):
+            return genny.generate(modeltype, model_stream, **validation_options)
+
 def fieldsets_to_html(fieldsets):
     frag = ""
     i = 1
