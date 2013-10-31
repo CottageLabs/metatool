@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>UKRISS Aggregation example</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="author" content="Emanuil Tolev">
+
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='bootstrap/css/bootstrap.min.css') }}">
+        <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
+        <!--[if lt IE 9]>
+        <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+        <![endif]-->
+    </head>
+
+    <body>
+        <div class="container-fluid">
+            <div class="content">
+                <div class="row-fluid">
+                    <div class="span12">
+                        <h2 style="text-align:center;">Aggregate
+                            publications information</h2>
+                        <div class="facet-view-simple"></div>
+                    </div>
+                </div>
+            </div>
+        </div> <!-- /container-fluid -->
+
+        <script src="{{ url_for('static', filename='jquery-1.7.1.min.js') }}"></script>
+        <script src="{{ url_for('static', filename='bootstrap/js/bootstrap.min.js') }}"></script>
+
+        <script type="text/javascript" src="{{ url_for('static', filename='facetview/jquery.facetview.js')}}"></script>
+        <script type="text/javascript" src="{{ url_for('static', filename='linkify/1.0-modified/jquery.linkify-1.0.js')}}"></script>
+
+        <script type="text/javascript">
+
+            jQuery(document).ready(function($) {
+
+                    $('.facet-view-simple').facetview({
+search_url: '{{ es_host }}/{{ es_index }}/publication/_search?',
+search_index: 'elasticsearch',
+datatype: 'json',
+
+facets: [
+{'field': 'author.exact', 'display': 'Author'},
+{'field': 'contributing_org.exact', 'display': 'Contributing Organisation'},
+{'field': 'journal_title.exact', 'display': 'Journal Title'},
+{'field': 'publisher_name.exact', 'display': 'Publisher'},
+{'field': 'cfTitle', 'display': 'Title'},
+{'field': 'cfKeyw.exact', 'display': 'Keywords'},
+{'field': 'cfResPublDate.exact', 'display': 'Publication Date'},
+{'field': 'cfResPublId.exact', 'display': 'Publication ID'},
+{'field': 'cfVol.exact', 'display': 'Volume'},
+{'field': 'cfEdition.exact', 'display': 'Edition'},
+{'field': 'cfIssue.exact', 'display': 'Issue'},
+{'field': 'cfTotalPages.exact', 'display': 'Total Pages'},
+{'field': 'cfURI.exact', 'display': 'URI'}
+],
+
+paging: {
+size: 10
+},
+result_display: [
+[
+{
+    "pre": "<em>Title</em>: <a href=\"#\"><strong>",
+    "field": "cfTitle",
+    "post": "</strong></a>"
+}
+],
+    [
+{
+    "pre": "<em>Journal Title: </em>",
+    "field": "journal_title",
+}
+],
+    [
+{
+    "pre": "<em>Keywords: </em>",
+    "field": "cfKeyw",
+}
+],
+    [
+{
+    "pre": "<em>Author: </em>",
+    "field": "author",
+}
+],
+    [
+{
+    "pre": "<em>Publisher: </em>",
+    "field": "publisher_name",
+}
+],
+    [
+{
+    "pre": "<em>Contributing Organisation: </em>",
+    "field": "contributing_org",
+}
+],
+    [
+{
+    "pre": "<em>URI: </em> <u>",
+    "field": "cfURI",
+    "post": "</u>"
+}
+],
+    [
+{
+    "pre": "<em>Publication Date: </em>",
+    "field": "cfResPublDate",
+}
+],
+    [
+{
+    "pre": "<em>Publication ID: </em>",
+    "field": "cfResPublId",
+}
+],
+    [
+{
+    "pre": "<em>Volume: </em>",
+    "field": "cfVol",
+}
+],
+    [
+{
+    "pre": "<em>Edition: </em>",
+    "field": "cfEdition",
+}
+],
+    [
+{
+    "pre": "<em>Issue: </em>",
+    "field": "cfIssue",
+}
+],
+    [
+{
+    "pre": "<em>Total Pages: </em>",
+    "field": "cfTotalPages",
+}
+],
+    ]
+    
+
+    });
+
+});
+</script>
+
+
+    </body>
+</html>
