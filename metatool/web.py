@@ -107,4 +107,4 @@ Check the elasticsearch log for exceptions.'''.format(models.Publication.es_inde
     return "Generated {0} publication records".format(how_many)
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', debug=True, port=5005)
+    app.run(host='0.0.0.0', debug=True, port=5007)
