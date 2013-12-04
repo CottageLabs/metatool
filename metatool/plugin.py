@@ -266,10 +266,12 @@ def load_nodemakers():
 
 def _load(klazz):
     # load the plugins from the plugin directory
-    names = [os.path.splitext(module)[0] for module in os.listdir(config.PLUGIN_DIR) if module.endswith(MODULE_EXTENSIONS) and module != "__init__.py"]
+    thisfile_dir = os.path.dirname(os.path.realpath(__file__))  # actual directory, not CWD (current working directory)
+    plugin_dir = os.path.join(thisfile_dir, 'plugins')
+    names = [os.path.splitext(module)[0] for module in os.listdir(plugin_dir) if module.endswith(MODULE_EXTENSIONS) and module != "__init__.py"]
     plugin_instances = {}
     for name in names:
-        mod = imp.load_source(name, os.path.join(config.PLUGIN_DIR, name + ".py"))
+        mod = imp.load_source(name, os.path.join(plugin_dir, name + ".py"))
         members = dir(mod)
         for member in members:
             attr = getattr(mod, member)
